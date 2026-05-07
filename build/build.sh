@@ -15,18 +15,21 @@ command -v basename >/dev/null 2>&1 || { echo "basename not found" >&2; exit 1; 
 command -v dirname >/dev/null 2>&1 || { echo "dirname not found" >&2; exit 1; }
 command -v tar >/dev/null 2>&1 || { echo "tar not found" >&2; exit 1; }
 
+mkdir -p "${BUILD_DIR}"
+touch "$LOG_FILE" 2>/dev/null || true
+
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
 }
 
 info() {
-    echo -e "\033[1;34m[INFO]\033[0m $*" | tee -a "$LOG_FILE"
+    echo -e "\033[1;34m[INFO]\033[0m $*" | tee -a "$LOG_FILE" 2>/dev/null || echo -e "\033[1;34m[INFO]\033[0m $*"
 }
 warn() {
-    echo -e "\033[1;33m[WARN]\033[0m $*" | tee -a "$LOG_FILE"
+    echo -e "\033[1;33m[WARN]\033[0m $*" | tee -a "$LOG_FILE" 2>/dev/null || echo -e "\033[1;33m[WARN]\033[0m $*"
 }
 error() {
-    echo -e "\033[0;31m[ERROR]\033[0m $*" | tee -a "$LOG_FILE"
+    echo -e "\033[0;31m[ERROR]\033[0m $*" | tee -a "$LOG_FILE" 2>/dev/null || echo -e "\033[0;31m[ERROR]\033[0m $*"
 }
 
 init_build() {
@@ -34,6 +37,13 @@ init_build() {
 
     mkdir -p "$SOURCE_CACHE" "$ROOTFS_DIR" "$ISO_DIR" "$PACKAGES_DIR"
     mkdir -p "${BUILD_DIR}/work"
+    mkdir -p "$(dirname "$LOG_FILE")"
+    touch "$LOG_FILE"
+
+    if [[ -z "$KERNEL_VERSION" ]]; then
+        KERNEL_VERSION="6.8.0"
+        info "No kernel version specified, using default: $KERNEL_VERSION"
+    fi
 
     if [[ ! -f "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz" ]]; then
         info "Downloading Linux kernel ${KERNEL_VERSION}..."

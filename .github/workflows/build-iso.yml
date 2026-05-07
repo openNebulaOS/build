@@ -32,20 +32,24 @@ jobs:
 
       - name: Build Base System
         run: |
+          chmod +x ./build/build.sh repos/repo-update star/star star-build/star-build scripts/*.sh
           ./build/build.sh rootfs -k ${{ steps.kernel.outputs.KERNEL_VERSION }}
 
       - name: Build Packages
         run: |
+          chmod +x star-build/star-build
           for pkg in packages/*.def; do
             star-build build "$pkg" || true
           done
 
       - name: Update Repository
         run: |
+          chmod +x ./repos/repo-update
           ./repos/repo-update
 
       - name: Build ISO
         run: |
+          chmod +x ./build/build.sh
           ./build/build.sh iso -k ${{ steps.kernel.outputs.KERNEL_VERSION }} \
             -v ${{ github.ref_name }}
 

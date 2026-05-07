@@ -24,6 +24,7 @@ jobs:
 
       - name: Build Packages
         run: |
+          chmod +x repos/repo-update star/star star-build/star-build scripts/*.sh
           mkdir -p /var/cache/star-build/{sources,packages,tmp}
           for pkg in packages/*.def; do
             star-build build "$pkg" -o ./repos/packages || true
@@ -31,6 +32,7 @@ jobs:
 
       - name: Update Repository Index
         run: |
+          chmod +x ./repos/repo-update
           ./repos/repo-update
 
       - name: Setup GitHub Pages

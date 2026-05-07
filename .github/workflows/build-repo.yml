@@ -28,10 +28,13 @@ jobs:
 
       - name: Build Packages
         run: |
-          chmod +x repos/repo-update star/star star-build/star-build scripts/*.sh
+          chmod +x ./repos/repo-update
+          chmod +x ./star/star
+          chmod +x ./star-build/star-build
+          chmod +x ./scripts/version.sh
           mkdir -p /var/cache/star-build/{sources,packages,tmp}
           for pkg in packages/*.def; do
-            star-build build "$pkg" -o ./repos/packages || true
+            ./star-build/star-build build "$pkg" -o ./repos/packages || true
           done
 
       - name: Update Repository Index

@@ -24,26 +24,31 @@ jobs:
       - name: Install Build Dependencies
         run: |
           pacman -Sy --noconfirm base-devel git curl xz tar gzip \
-            grub squashfs-tools dosfstools libisofs \
-            squashfs-tools openssl
+            grub squashfs-tools dosfstools libisofs openssl
 
       - name: Get Latest Kernel Version
         id: kernel
         run: |
           KERNEL_VERSION=$(curl -s https://www.kernel.org/releases.json | \
             grep -o '"version":"[^"]*' | head -1 | cut -d'"' -f4 || echo "6.8.0")
-          echo "KERNEL_VERSION=$KERNEL_VERSION" >> $GITHUB_OUTPUT
+          echo "KERNEL_VERSION=$KERNEL_VERSION" >> "$GITHUB_OUTPUT"
+          echo "KERNEL_VERSION=$KERNEL_VERSION"
 
       - name: Build Base System
         run: |
-          chmod +x ./build/build.sh repos/repo-update star/star star-build/star-build scripts/*.sh
-          ./build/build.sh rootfs -k ${{ steps.kernel.outputs.KERNEL_VERSION }}
+          chmod +x ./build/build.sh
+          chmod +x ./repos/repo-update
+          chmod +x ./star/star
+          chmod +x ./star-build/star-build
+          chmod +x ./scripts/version.sh
+          chmod +x ./scripts/cross-compile.env
+          ./build/build.sh rootfs -k "${{ steps.kernel.outputs.KERNEL_VERSION }}"
 
       - name: Build Packages
         run: |
-          chmod +x star-build/star-build
+          chmod +x ./star-build/star-build
           for pkg in packages/*.def; do
-            star-build build "$pkg" || true
+            ./star-build/star-build build "$pkg" || true
           done
 
       - name: Update Repository
@@ -53,9 +58,8 @@ jobs:
 
       - name: Build ISO
         run: |
-          chmod +x ./build/build.sh
-          ./build/build.sh iso -k ${{ steps.kernel.outputs.KERNEL_VERSION }} \
-            -v ${{ github.ref_name }}
+          ./build/build.sh iso -k "${{ steps.kernel.outputs.KERNEL_VERSION }}" \
+            -v "${{ github.ref_name }}"
 
       - name: Generate Checksums
         run: |
@@ -74,7 +78,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: checksums
-          path: build/iso/*.iso.sha256
+          path: build/iso/*.sha256
           retention-days: 90
 
   release:

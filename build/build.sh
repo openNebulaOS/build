@@ -93,7 +93,7 @@ create_rootfs() {
     mkdir -p "${rootfs}"/{bin,etc,home,lib,media,mnt,opt,proc,root,sbin,srv,sys,tmp,usr,var}
     mkdir -p "${rootfs}"/{boot,dev,run,run/lock,run/shm}
     mkdir -p "${rootfs}"/usr/{bin,lib,sbin,share,src,tmp}
-    mkdir -p "${rootfs}"/var/{cache,lib,log,spool}
+    mkdir -p "${rootfs}"/var/{cache,lib,log,spool,tmp}
     mkdir -p "${rootfs}"/var/backups
     mkdir -p "${rootfs}"/etc/skel
     mkdir -p "${rootfs}"/root

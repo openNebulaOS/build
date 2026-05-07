@@ -3,8 +3,7 @@ set -e
 
 VERSION="1.0.0"
 BUILD_DIR="${BUILD_DIR:-/var/tmp/openNebula-build}"
-KERNEL_VERSION="${KERNEL_VERSION:-$(curl -s https://www.kernel.org/releases.json | grep -o '"version":"[^"]*' | head -1 | cut -d'"' -f4 || echo '6.8.0')}"
-KERNEL_URL="https://cdn.kernel.org/pub/linux/kernel/v${KERNEL_VERSION%%.*}.x/linux-${KERNEL_VERSION}.tar.xz"
+KERNEL_VERSION="${KERNEL_VERSION:-}"
 SOURCE_CACHE="${BUILD_DIR}/cache"
 ROOTFS_DIR="${BUILD_DIR}/rootfs"
 ISO_DIR="${BUILD_DIR}/iso"
@@ -45,16 +44,34 @@ init_build() {
         info "No kernel version specified, using default: $KERNEL_VERSION"
     fi
 
+    local kernel_major="${KERNEL_VERSION%%.*}"
+    KERNEL_URL="https://cdn.kernel.org/pub/linux/kernel/v${kernel_major}.x/linux-${KERNEL_VERSION}.tar.xz"
+
     if [[ ! -f "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz" ]]; then
-        info "Downloading Linux kernel ${KERNEL_VERSION}..."
+        info "Downloading Linux kernel ${KERNEL_VERSION} from $KERNEL_URL"
         if command -v curl >/dev/null 2>&1; then
-            curl -L -o "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz" "$KERNEL_URL" || return 1
+            curl -L --fail -o "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz" "$KERNEL_URL" || {
+                error "Failed to download kernel"
+                rm -f "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz"
+                return 1
+            }
         elif command -v wget >/dev/null 2>&1; then
-            wget -O "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz" "$KERNEL_URL" || return 1
+            wget -O "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz" "$KERNEL_URL" || {
+                error "Failed to download kernel"
+                rm -f "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz"
+                return 1
+            }
         else
             error "curl or wget required to download kernel"
             return 1
         fi
+        local size=$(stat -c%s "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz" 2>/dev/null || stat -f%z "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz" 2>/dev/null)
+        if [[ "$size" -lt 1000000 ]]; then
+            error "Downloaded file too small ($size bytes), likely invalid"
+            rm -f "${SOURCE_CACHE}/linux-${KERNEL_VERSION}.tar.xz"
+            return 1
+        fi
+        info "Kernel downloaded successfully ($size bytes)"
     else
         info "Using cached kernel source"
     fi

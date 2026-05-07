@@ -8,6 +8,10 @@ on:
       - 'repos/**'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pages: write
+
 jobs:
   build-repo:
     runs-on: ubuntu-latest

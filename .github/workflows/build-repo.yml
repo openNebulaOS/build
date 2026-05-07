@@ -1,0 +1,43 @@
+name: Build Repository
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'repos/**'
+  workflow_dispatch:
+
+jobs:
+  build-repo:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          pacman -Sy --noconfirm base-devel git curl xz tar gzip
+
+      - name: Build Packages
+        run: |
+          mkdir -p /var/cache/star-build/{sources,packages,tmp}
+          for pkg in packages/*.def; do
+            star-build build "$pkg" -o ./repos/packages || true
+          done
+
+      - name: Update Repository Index
+        run: |
+          ./repos/repo-update
+
+      - name: Setup GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./repos
+          publish_branch: gh-pages
+          user_name: 'openNebula CI'
+          user_email: 'ci@opennebula.io'

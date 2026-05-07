@@ -1,0 +1,96 @@
+name: Build ISO
+
+on:
+  push:
+    branches: [main, master]
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          pacman -Sy --noconfirm base-devel git curl xz tar gzip \
+            grub squashfs-tools dosfstools libisofs_x86 \
+            squashfs-tools openssl
+
+      - name: Get Latest Kernel Version
+        id: kernel
+        run: |
+          KERNEL_VERSION=$(curl -s https://www.kernel.org/releases.json | \
+            grep -o '"version":"[^"]*' | head -1 | cut -d'"' -f4 || echo "6.8.0")
+          echo "KERNEL_VERSION=$KERNEL_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build Base System
+        run: |
+          ./build/build.sh rootfs -k ${{ steps.kernel.outputs.KERNEL_VERSION }}
+
+      - name: Build Packages
+        run: |
+          for pkg in packages/*.def; do
+            star-build build "$pkg" || true
+          done
+
+      - name: Update Repository
+        run: |
+          ./repos/repo-update
+
+      - name: Build ISO
+        run: |
+          ./build/build.sh iso -k ${{ steps.kernel.outputs.KERNEL_VERSION }} \
+            -v ${{ github.ref_name }}
+
+      - name: Generate Checksums
+        run: |
+          cd build/iso
+          sha256sum *.iso > SHA256SUMS
+          md5sum *.iso > MD5SUMS
+
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openNebula-ISO
+          path: build/iso/*.iso
+          retention-days: 30
+
+      - name: Upload Checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: build/iso/*.iso.sha256
+          retention-days: 90
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+      - name: Download ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: openNebula-ISO
+          path: release
+
+      - name: Download Checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: checksums
+          path: release
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

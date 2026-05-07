@@ -1,0 +1,14 @@
+PKG_NAME="which"
+PKG_VERSION="2.21"
+PKG_SOURCE="https://ftp.gnu.org/gnu/which/which-2.21.tar.gz"
+PKG_DEPS="glibc"
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="Which command utility"
+PKG_LICENSE="GPL-3.0"
+PKG_ARCH="x86_64"
+
+build() {
+    ./configure --prefix=/usr
+    make
+    make install
+}

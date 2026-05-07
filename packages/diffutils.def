@@ -1,0 +1,11 @@
+PKG_NAME="diffutils"
+PKG_VERSION="3.10"
+PKG_SOURCE="https://ftp.gnu.org/gnu/diffutils/diffutils-${PKG_VERSION}.tar.xz"
+PKG_DEPS="glibc"
+PKG_DESCRIPTION="GNU diff utility"
+
+build() {
+    ./configure --prefix=/usr
+    make
+    make install
+}

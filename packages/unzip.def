@@ -1,0 +1,13 @@
+PKG_NAME="unzip"
+PKG_VERSION="6.0"
+PKG_SOURCE="https://download.sourceforge.net/infozip/unzip60.tar.gz"
+PKG_DEPS="bzip2 glibc"
+PKG_BUILD_DEPS="gcc make"
+PKG_DESCRIPTION="ZIP extraction utility"
+PKG_LICENSE="Info-ZIP"
+PKG_ARCH="x86_64"
+
+build() {
+    make -f unix/Makefile generic
+    make -f unix/Makefile install
+}

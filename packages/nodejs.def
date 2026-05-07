@@ -1,0 +1,15 @@
+PKG_NAME="nodejs"
+PKG_VERSION="21"
+PKG_SOURCE="https://nodejs.org/dist/v21.6.1/node-v21.6.1-linux-x64.tar.xz"
+PKG_DEPS="c-ares libnghttp2 openssl zlib"
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="JavaScript runtime"
+PKG_LICENSE="MIT"
+PKG_ARCH="x86_64"
+
+star_install() {
+    tar -C /usr -xf "\$PKG_SOURCE" --strip-components=1
+    ln -sf /usr/bin/node /usr/bin/node
+    ln -sf /usr/bin/npm /usr/bin/npm
+    ln -sf /usr/bin/npx /usr/bin/npx
+}

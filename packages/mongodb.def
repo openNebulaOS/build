@@ -1,0 +1,13 @@
+PKG_NAME="mongodb"
+PKG_VERSION="7.0"
+PKG_SOURCE="https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2204-7.0.5.tgz"
+PKG_DEPS="glibc libcurl libpcre2"
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="NoSQL database"
+PKG_LICENSE="SSPL-1.0"
+PKG_ARCH="x86_64"
+
+star_install() {
+    tar -C /usr -xf "\$PKG_SOURCE"
+    ln -sf /usr/mongodb-linux-x86_64-ubuntu2204-7.0.5/bin/* /usr/bin/
+}

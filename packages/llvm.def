@@ -1,0 +1,19 @@
+PKG_NAME="llvm"
+PKG_VERSION="17"
+PKG_SOURCE="https://github.com/llvm/llvm-project/releases/download/llvmorg-17.0.6/llvm-17.0.6.src.tar.xz"
+PKG_DEPS="zlib libffi libxml2"
+PKG_BUILD_DEPS="cmake ninja python3"
+PKG_DESCRIPTION="LLVM compiler toolchain"
+PKG_LICENSE="Apache-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    mkdir build && cd build
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DLLVM_BUILD_LLVM_DYLIB=ON \
+        -DLLVM_ENABLE_RTTI=ON \
+        ../llvm
+    ninja
+    ninja install
+}

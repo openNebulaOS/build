@@ -1,0 +1,14 @@
+PKG_NAME="firewalld"
+PKG_VERSION="2.0"
+PKG_SOURCE="https://github.com/firewalld/firewalld/releases/download/v2.0.0/firewalld-2.0.0.tar.gz"
+PKG_DEPS="dbus glibc python3"
+PKG_BUILD_DEPS="meson ninja"
+PKG_DESCRIPTION="Firewall daemon"
+PKG_LICENSE="GPL-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    meson setup build --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+    ninja -C build
+    ninja -C build install
+}

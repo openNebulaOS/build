@@ -1,0 +1,18 @@
+PKG_NAME="mesa"
+PKG_VERSION="24.0"
+PKG_RELEASE="1"
+PKG_SOURCE="https://archive.mesa3d.org Mesa3D-24.0.tar.xz"
+PKG_DEPS="elfutils libdrm llvm wayland xorgproto"
+PKG_BUILD_DEPS="bison flex gcc meson ninja cmake"
+PKG_DESCRIPTION="Mesa 3D graphics library"
+PKG_LICENSE="MIT"
+PKG_ARCH="x86_64"
+
+build_mesa() {
+    meson setup build --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        -Ddri-drivers=radeon,amdgpu,nouveau,i915,swrast \
+        -Dgallium-drivers=radeon,amdgpu,nouveau,iris,swrast,zink \
+        -Dvulkan-drivers=amd,intel,swrast
+    ninja -C build
+    ninja -C build install
+}

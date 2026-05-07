@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+name="Network Interface"
+description="Network interface configuration"
+command="/sbin/ifconfig"
+command_args="lo 127.0.0.1 netmask 255.0.0.0 up"
+pidfile="/run/net.lo.pid"
+
+depend() {
+    after hostname
+    need localmount
+}
+
+start() {
+    ebegin "Starting network lo interface"
+    /sbin/ifconfig lo 127.0.0.1 netmask 255.0.0.0 up
+    eend $?
+}

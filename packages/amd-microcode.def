@@ -1,0 +1,13 @@
+PKG_NAME="amd-microcode"
+PKG_VERSION="20240115"
+PKG_RELEASE="1"
+PKG_SOURCE=""
+PKG_DEPS=""
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="AMD CPU microcode updates"
+PKG_LICENSE="AMD"
+PKG_ARCH="x86_64"
+
+star_install() {
+    install -Dm644 amd-ucode/*.bin /lib/firmware/amd-ucode/
+}

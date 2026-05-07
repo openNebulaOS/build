@@ -1,0 +1,13 @@
+PKG_NAME="ninja"
+PKG_VERSION="1.12"
+PKG_SOURCE="https://github.com/ninja-build/ninja/archive/refs/tags/v1.12.1.tar.gz"
+PKG_DEPS="python3 re2c"
+PKG_BUILD_DEPS="gcc go"
+PKG_DESCRIPTION="Build system"
+PKG_LICENSE="Apache-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    python3 configure.py --bootstrap
+    install -m755 ninja /usr/bin/ninja
+}

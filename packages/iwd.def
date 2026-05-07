@@ -1,0 +1,11 @@
+PKG_NAME="iwd"
+PKG_VERSION="2.10"
+PKG_SOURCE="https://mirrors.edge.kernel.org/pub/linux/network/wireless/iwd-${PKG_VERSION}.tar.xz"
+PKG_DEPS="openssl dbus"
+PKG_DESCRIPTION="Internet Wireless Daemon"
+
+build() {
+    meson setup build --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+    ninja -C build
+    ninja -C build install
+}

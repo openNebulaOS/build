@@ -1,0 +1,14 @@
+PKG_NAME="nftables"
+PKG_VERSION="1.0"
+PKG_SOURCE="https://www.netfilter.org/projects/nftables/files/nftables-1.0.9.tar.xz"
+PKG_DEPS="glibc libmnl libnftnl"
+PKG_BUILD_DEPS="bison flex gcc make pkg-config"
+PKG_DESCRIPTION="Netfilter tables userspace tools"
+PKG_LICENSE="GPL-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+    make
+    make install
+}

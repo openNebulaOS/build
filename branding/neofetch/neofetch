@@ -1,0 +1,27 @@
+#!/bin/bash
+
+cat << 'EOF'
+
+    ███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗
+    ████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝
+    ██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗
+    ██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║
+    ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║
+    ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
+
+         openNebula Linux - Stellar Edition
+
+EOF
+
+echo "  Linux Kernel: $(uname -r 2>/dev/null || echo 'Unknown')"
+echo "  Uptime: $(uptime -p 2>/dev/null || echo 'Unknown')"
+echo "  Shell: ${SHELL##*/}"
+echo "  Resolution: ${RESOLUTION:-Unknown}"
+echo "  DE: ${DESKTOP_SESSION:-Unknown}"
+echo "  WM: ${XDG_CURRENT_DESKTOP:-Unknown}"
+echo "  Theme: ${THEME:-Unknown}"
+echo "  Icons: ${ICONS:-Unknown}"
+echo "  Terminal: ${TERM:-Unknown}"
+echo "  CPU: $(grep 'model name' /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2 | sed 's/^ *//' || echo 'Unknown')"
+echo "  Memory: $(free -h 2>/dev/null | awk '/^Mem:/ {print $3 "/" $2}' || echo 'Unknown')"
+echo ""

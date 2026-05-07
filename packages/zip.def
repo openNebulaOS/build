@@ -1,0 +1,13 @@
+PKG_NAME="zip"
+PKG_VERSION="3.0"
+PKG_SOURCE="https://download.sourceforge.net/infozip/zip30.tar.gz"
+PKG_DEPS="bzip2 glibc"
+PKG_BUILD_DEPS="gcc make"
+PKG_DESCRIPTION="ZIP compression utility"
+PKG_LICENSE="Info-ZIP"
+PKG_ARCH="x86_64"
+
+build() {
+    make -f unix/Makefile
+    make -f unix/Makefile install
+}

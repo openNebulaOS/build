@@ -1,0 +1,13 @@
+PKG_NAME="docker"
+PKG_VERSION="25.0"
+PKG_SOURCE="https://download.docker.com/linux/static/stable/x86_64/docker-25.0.3.tgz"
+PKG_DEPS="containerd iptables"
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="Container runtime"
+PKG_LICENSE="Apache-2.0"
+PKG_ARCH="x86_64"
+
+star_install() {
+    install -Dm755 docker/* /usr/bin/
+    install -Dm644 docker.service /etc/systemd/system/docker.service
+}

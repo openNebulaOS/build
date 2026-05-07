@@ -1,0 +1,17 @@
+PKG_NAME="gcc"
+PKG_VERSION="13.2"
+PKG_RELEASE="1"
+PKG_SOURCE="https://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.xz"
+PKG_DEPS="binutils glibc mpc mpfr"
+PKG_BUILD_DEPS="bison flex zip unzip"
+PKG_DESCRIPTION="GNU Compiler Collection"
+PKG_LICENSE="GPL-3.0"
+PKG_ARCH="x86_64"
+
+build_gcc() {
+    mkdir build
+    cd build
+    ../configure --prefix=/usr --enable-languages=c,c++ --disable-multilib
+    make -j$(nproc)
+    make install
+}

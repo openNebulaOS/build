@@ -1,0 +1,14 @@
+PKG_NAME="perl"
+PKG_VERSION="5.38"
+PKG_SOURCE="https://www.cpan.org/src/5.0/perl-5.38.2.tar.gz"
+PKG_DEPS="glibc db gdbm"
+PKG_BUILD_DEPS="bison gcc make"
+PKG_DESCRIPTION="Practical Extraction and Report Language"
+PKG_LICENSE="GPL-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    sh Configure -des -Dprefix=/usr -Dvendorlib=/usr/lib/perl5/site_perl
+    make
+    make install
+}

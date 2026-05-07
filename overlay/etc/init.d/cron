@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+name="Cron Service"
+description="Cron daemon"
+command="/usr/sbin/crond"
+command_args="-n -c /var/spool/cron"
+pidfile="/run/crond.pid"
+command_background=true
+
+depend() {
+    after network
+}

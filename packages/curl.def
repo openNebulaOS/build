@@ -1,0 +1,12 @@
+PKG_NAME="curl"
+PKG_VERSION="8.6"
+PKG_SOURCE="https://curl.se/download/curl-${PKG_VERSION}.tar.xz"
+PKG_DEPS="openssl zlib brotli libssh2"
+PKG_DESCRIPTION="Command line tool for transferring data with URL syntax"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --with-openssl --with-libssh2 --disable-debug --enable-optimizations
+    make
+    make install
+}

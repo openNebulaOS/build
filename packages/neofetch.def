@@ -1,0 +1,15 @@
+PKG_NAME="neofetch"
+PKG_VERSION="7.1.0"
+PKG_SOURCE="https://github.com/dylanaraps/neofetch/archive/refs/tags/${PKG_VERSION}.tar.gz"
+PKG_DEPS="bash"
+PKG_DESCRIPTION="A CLI system information tool written in bash"
+
+build() {
+    make
+    make install PREFIX="${PKG_DESTDIR}/usr"
+}
+
+star_install() {
+    install -Dm755 neofetch "${PKG_DESTDIR}/usr/bin/neofetch"
+    install -Dm644 config/config || true
+}

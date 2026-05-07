@@ -1,0 +1,13 @@
+PKG_NAME="p7zip"
+PKG_VERSION="17.04"
+PKG_SOURCE="https://github.com/pivaszches/p7zip/releases/download/17.04/p7zip_17.04_src.tar.gz"
+PKG_DEPS="glibc"
+PKG_BUILD_DEPS="gcc make"
+PKG_DESCRIPTION="7-zip file archiver"
+PKG_LICENSE="LGPL-2.1"
+PKG_ARCH="x86_64"
+
+build() {
+    make
+    make install
+}

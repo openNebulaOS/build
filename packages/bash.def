@@ -1,0 +1,26 @@
+PKG_NAME="bash"
+PKG_VERSION="5.2.26"
+PKG_SOURCE="https://ftp.gnu.org/gnu/bash/bash-5.2.26.tar.gz"
+PKG_DEPS="ncurses readline"
+PKG_BUILD_DEPS="bison flex gcc make"
+PKG_DESCRIPTION="Bourne Again SHell"
+PKG_LICENSE="GPL-3.0"
+PKG_ARCH="x86_64"
+
+build_bash() {
+    ./configure --prefix=/usr \
+                --sysconfdir=/etc \
+                --localstatedir=/var \
+                --without-bash-malloc \
+                --with-installed-readline \
+                --disable-nLS
+    make
+    make install
+}
+
+star_install() {
+    mkdir -p "${PKG_DESTDIR}/etc/skel"
+    mkdir -p "${PKG_DESTDIR}/bin"
+    cp -a bash "${PKG_DESTDIR}/bin/bash"
+    ln -sf bash "${PKG_DESTDIR}/bin/sh"
+}

@@ -1,0 +1,16 @@
+PKG_NAME="grub"
+PKG_VERSION="2.06"
+PKG_RELEASE="1"
+PKG_SOURCE="https://ftp.gnu.org/gnu/grub/grub-2.06.tar.xz"
+PKG_DEPS="bash gettext freetype fuse libiconv ncurses"
+PKG_BUILD_DEPS="bison flex gcc gettext python3"
+PKG_DESCRIPTION="GRUB2 bootloader"
+PKG_LICENSE="GPL-3.0"
+PKG_ARCH="x86_64"
+
+build_grub() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --disable-efiemu --disable-libzfs
+    make -j$(nproc)
+    make install
+}

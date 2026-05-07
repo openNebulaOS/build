@@ -1,0 +1,2 @@
+# System
+* * * * * root /usr/bin/logger "openNebula system check" 2>/dev/null

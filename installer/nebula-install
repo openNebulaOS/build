@@ -1,0 +1,676 @@
+#!/bin/bash
+set -e
+
+VERSION="1.0.0"
+INSTALL_LOG="/var/log/nebula-install.log"
+CONFIG_FILE="/tmp/nebula-install.conf"
+
+command -v basename >/dev/null 2>&1 || { echo "basename not found" >&2; exit 1; }
+command -v dirname >/dev/null 2>&1 || { echo "dirname not found" >&2; exit 1; }
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+log() {
+    echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$INSTALL_LOG"
+}
+
+show_banner() {
+    clear
+    cat << 'EOF'
+         openNebula Linux Installer v${VERSION}
+EOF
+}
+
+show_main_menu() {
+    echo -e "${CYAN}Main Menu${NC}"
+    echo "============================================"
+    echo "1. Language Selection"
+    echo "2. Network Configuration"
+    echo "3. Disk Partitioning"
+    echo "4. Select Installation Target"
+    echo "5. Configure Bootloader"
+    echo "6. User Configuration"
+    echo "7. Hostname Configuration"
+    echo "8. Package Selection"
+    echo "9. Review Configuration"
+    echo "10. Begin Installation"
+    echo "11. Quit"
+    echo ""
+    echo -n "Select an option [1-11]: "
+}
+
+set_language() {
+    echo ""
+    echo -e "${YELLOW}Select Language:${NC}"
+    echo "============================================"
+    echo "1) English (default)"
+    echo "2) Spanish (Espanol)"
+    echo "3) French (Francais)"
+    echo "4) German (Deutsch)"
+    echo "5) Portuguese (Portugues)"
+    echo "6) Italian (Italiano)"
+    echo "7) Russian (Russkiy)"
+    echo "8) Chinese Simplified (简体中文)"
+    echo "9) Chinese Traditional (繁體中文)"
+    echo "10) Japanese (日本語)"
+    echo "11) Korean (한국어)"
+    echo "12) Arabic (العربية)"
+    echo "13) Hindi (हिन्दी)"
+    echo "14) Turkish (Turkce)"
+    echo "15) Polish (Polski)"
+    echo "16) Dutch (Nederlands)"
+    echo "17) Swedish (Svenska)"
+    echo "18) Norwegian (Norsk)"
+    echo "19) Finnish (Suomi)"
+    echo "20) Danish (Dansk)"
+    echo ""
+    echo -n "Choice [1]: "
+    read lang_choice
+
+    case "$lang_choice" in
+        2) export INSTALL_LANG="es_ES.UTF-8"; LANG_NAME="Spanish" ;;
+        3) export INSTALL_LANG="fr_FR.UTF-8"; LANG_NAME="French" ;;
+        4) export INSTALL_LANG="de_DE.UTF-8"; LANG_NAME="German" ;;
+        5) export INSTALL_LANG="pt_BR.UTF-8"; LANG_NAME="Portuguese" ;;
+        6) export INSTALL_LANG="it_IT.UTF-8"; LANG_NAME="Italian" ;;
+        7) export INSTALL_LANG="ru_RU.UTF-8"; LANG_NAME="Russian" ;;
+        8) export INSTALL_LANG="zh_CN.UTF-8"; LANG_NAME="Chinese Simplified" ;;
+        9) export INSTALL_LANG="zh_TW.UTF-8"; LANG_NAME="Chinese Traditional" ;;
+        10) export INSTALL_LANG="ja_JP.UTF-8"; LANG_NAME="Japanese" ;;
+        11) export INSTALL_LANG="ko_KR.UTF-8"; LANG_NAME="Korean" ;;
+        12) export INSTALL_LANG="ar_SA.UTF-8"; LANG_NAME="Arabic" ;;
+        13) export INSTALL_LANG="hi_IN.UTF-8"; LANG_NAME="Hindi" ;;
+        14) export INSTALL_LANG="tr_TR.UTF-8"; LANG_NAME="Turkish" ;;
+        15) export INSTALL_LANG="pl_PL.UTF-8"; LANG_NAME="Polish" ;;
+        16) export INSTALL_LANG="nl_NL.UTF-8"; LANG_NAME="Dutch" ;;
+        17) export INSTALL_LANG="sv_SE.UTF-8"; LANG_NAME="Swedish" ;;
+        18) export INSTALL_LANG="nb_NO.UTF-8"; LANG_NAME="Norwegian" ;;
+        19) export INSTALL_LANG="fi_FI.UTF-8"; LANG_NAME="Finnish" ;;
+        20) export INSTALL_LANG="da_DK.UTF-8"; LANG_NAME="Danish" ;;
+        *) export INSTALL_LANG="en_US.UTF-8"; LANG_NAME="English" ;;
+    esac
+
+    sed -i "s/^INSTALL_LANG=.*/INSTALL_LANG=\"$INSTALL_LANG\"/" "$CONFIG_FILE" 2>/dev/null || \
+        echo "INSTALL_LANG=\"$INSTALL_LANG\"" >> "$CONFIG_FILE"
+    echo "Language set to: $LANG_NAME"
+}
+
+configure_network() {
+    echo ""
+    echo -e "${YELLOW}Network Configuration${NC}"
+    echo "============================================"
+
+    if command -v ip >/dev/null 2>&1; then
+        echo "Detected network interfaces:"
+        ip link show | grep -E '^[0-9]+:' | awk '{print $2}' | sed 's/:$//' | nl
+    elif command -v ifconfig >/dev/null 2>&1; then
+        ifconfig -a | grep -E '^[a-z]' | awk '{print $1}' | nl
+    fi
+
+    echo ""
+    echo "Network configuration options:"
+    echo "1) DHCP (automatic)"
+    echo "2) Static IP"
+    echo "3) Skip (no network)"
+    echo ""
+    echo -n "Choice [1]: "
+    read net_choice
+
+    case "$net_choice" in
+        2)
+            echo -n "Enter IP address (e.g., 192.168.1.100): "
+            read static_ip
+            echo -n "Enter netmask (e.g., 255.255.255.0): "
+            read static_netmask
+            echo -n "Enter gateway: "
+            read static_gateway
+            echo -n "Enter DNS servers (space separated): "
+            read static_dns
+            export NETWORK_TYPE="static"
+            export STATIC_IP="$static_ip"
+            export STATIC_NETMASK="$static_netmask"
+            export STATIC_GATEWAY="$static_gateway"
+            export STATIC_DNS="$static_dns"
+            ;;
+        3)
+            export NETWORK_TYPE="none"
+            echo "Network configuration skipped"
+            ;;
+        *)
+            export NETWORK_TYPE="dhcp"
+            echo "DHCP configuration selected"
+            ;;
+    esac
+
+    sed -i "s/^NETWORK_TYPE=.*/NETWORK_TYPE=\"$NETWORK_TYPE\"/" "$CONFIG_FILE" 2>/dev/null || \
+        echo "NETWORK_TYPE=\"$NETWORK_TYPE\"" >> "$CONFIG_FILE"
+}
+
+list_disks() {
+    echo ""
+    echo -e "${YELLOW}Available Disks${NC}"
+    echo "============================================"
+
+    if command -v lsblk >/dev/null 2>&1; then
+        lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT
+    elif command -v fdisk >/dev/null 2>&1; then
+        fdisk -l 2>/dev/null | grep "Disk /dev/"
+    fi
+}
+
+partition_disk() {
+    local disk="$1"
+
+    echo ""
+    echo -e "${YELLOW}Partitioning $disk${NC}"
+    echo "============================================"
+    echo "Partitioning options:"
+    echo "1) Automatic (LVM)"
+    echo "2) Automatic (Simple)"
+    echo "3) Manual Partitioning"
+    echo ""
+    echo -n "Choice [1]: "
+    read part_choice
+
+    case "$part_choice" in
+        2)
+            export PART_TYPE="simple"
+            echo "Simple partitioning selected (ROOT + SWAP)"
+            ;;
+        3)
+            export PART_TYPE="manual"
+            if command -v cfdisk >/dev/null 2>&1; then
+                cfdisk "$disk"
+            elif command -v fdisk >/dev/null 2>&1; then
+                fdisk "$disk"
+            fi
+            ;;
+        *)
+            export PART_TYPE="lvm"
+            echo "LVM partitioning selected"
+            ;;
+    esac
+}
+
+select_disk() {
+    echo ""
+    echo -e "${YELLOW}Disk Selection${NC}"
+    echo "============================================"
+    list_disks
+    echo ""
+    echo -n "Enter target disk (e.g., /dev/sda): "
+    read target_disk
+
+    if [[ ! -b "$target_disk" ]] && [[ "$target_disk" != "/dev/null" ]]; then
+        echo -e "${RED}Error: Invalid disk device${NC}"
+        return 1
+    fi
+
+    export TARGET_DISK="$target_disk"
+    sed -i "s/^TARGET_DISK=.*/TARGET_DISK=\"$TARGET_DISK\"/" "$CONFIG_FILE" 2>/dev/null || \
+        echo "TARGET_DISK=\"$TARGET_DISK\"" >> "$CONFIG_FILE"
+
+    partition_disk "$target_disk"
+}
+
+configure_bootloader() {
+    echo ""
+    echo -e "${YELLOW}Bootloader Configuration${NC}"
+    echo "============================================"
+    echo "Select bootloader:"
+    echo "1) GRUB (default)"
+    echo "2) systemd-boot"
+    echo "3) Skip bootloader installation"
+    echo ""
+    echo -n "Choice [1]: "
+    read boot_choice
+
+    case "$boot_choice" in
+        2)
+            export BOOTLOADER="systemd-boot"
+            ;;
+        3)
+            export BOOTLOADER="none"
+            ;;
+        *)
+            export BOOTLOADER="grub"
+            ;;
+    esac
+
+    echo ""
+    echo "Bootloader target disk:"
+    list_disks
+    echo ""
+    echo -n "Install bootloader to (e.g., /dev/sda) [$TARGET_DISK]: "
+    read boot_disk
+    export BOOT_DISK="${boot_disk:-$TARGET_DISK}"
+
+    sed -i "s/^BOOTLOADER=.*/BOOTLOADER=\"$BOOTLOADER\"/" "$CONFIG_FILE" 2>/dev/null || \
+        echo "BOOTLOADER=\"$BOOTLOADER\"" >> "$CONFIG_FILE"
+    sed -i "s/^BOOT_DISK=.*/BOOT_DISK=\"$BOOT_DISK\"/" "$CONFIG_FILE" 2>/dev/null || \
+        echo "BOOT_DISK=\"$BOOT_DISK\"" >> "$CONFIG_FILE"
+
+    echo ""
+    echo -e "${YELLOW}EFI/BIOS Mode${NC}"
+    echo "============================================"
+    echo "1) EFI (UEFI) - recommended"
+    echo "2) BIOS (Legacy)"
+    echo "3) Auto-detect"
+    echo ""
+    echo -n "Choice [3]: "
+    read efi_choice
+
+    case "$efi_choice" in
+        1) export EFI_MODE="yes" ;;
+        2) export EFI_MODE="no" ;;
+        *) export EFI_MODE="auto" ;;
+    esac
+
+    sed -i "s/^EFI_MODE=.*/EFI_MODE=\"$EFI_MODE\"/" "$CONFIG_FILE" 2>/dev/null || \
+        echo "EFI_MODE=\"$EFI_MODE\"" >> "$CONFIG_FILE"
+}
+
+create_users() {
+    echo ""
+    echo -e "${YELLOW}User Configuration${NC}"
+    echo "============================================"
+    echo -n "Enter root password: "
+    read -s root_pass
+    echo ""
+    echo -n "Confirm root password: "
+    read -s root_pass_confirm
+    echo ""
+
+    if [[ "$root_pass" != "$root_pass_confirm" ]]; then
+        echo -e "${RED}Error: Passwords do not match${NC}"
+        return 1
+    fi
+
+    export ROOT_PASS="$root_pass"
+    sed -i "s/^ROOT_PASS=.*/ROOT_PASS=\"$ROOT_PASS\"/" "$CONFIG_FILE" 2>/dev/null || \
+        echo "ROOT_PASS=\"$ROOT_PASS\"" >> "$CONFIG_FILE"
+
+    echo ""
+    echo -n "Create regular user? (y/N): "
+    read create_user
+
+    if [[ "$create_user" =~ ^[Yy]$ ]]; then
+        echo -n "Enter username: "
+        read user_name
+
+        if [[ ! "$user_name" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+            echo -e "${RED}Error: Invalid username${NC}"
+            return 1
+        fi
+
+        echo -n "Enter password for $user_name: "
+        read -s user_pass
+        echo ""
+        echo -n "Confirm password: "
+        read -s user_pass_confirm
+        echo ""
+
+        if [[ "$user_pass" != "$user_pass_confirm" ]]; then
+            echo -e "${RED}Error: Passwords do not match${NC}"
+            return 1
+        fi
+
+        export USER_NAME="$user_name"
+        export USER_PASS="$user_pass"
+        sed -i "s/^USER_NAME=.*/USER_NAME=\"$USER_NAME\"/" "$CONFIG_FILE" 2>/dev/null || \
+            echo "USER_NAME=\"$USER_NAME\"" >> "$CONFIG_FILE"
+        sed -i "s/^USER_PASS=.*/USER_PASS=\"$USER_PASS\"/" "$CONFIG_FILE" 2>/dev/null || \
+            echo "USER_PASS=\"$USER_PASS\"" >> "$CONFIG_FILE"
+    fi
+}
+
+set_hostname() {
+    echo ""
+    echo -e "${YELLOW}Hostname Configuration${NC}"
+    echo "============================================"
+    echo -n "Enter hostname [opennebula]: "
+    read hostname
+
+    if [[ -z "$hostname" ]]; then
+        hostname="opennebula"
+    fi
+
+    if [[ ! "$hostname" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*$ ]]; then
+        echo -e "${RED}Error: Invalid hostname${NC}"
+        return 1
+    fi
+
+    export HOSTNAME="$hostname"
+    sed -i "s/^HOSTNAME=.*/HOSTNAME=\"$HOSTNAME\"/" "$CONFIG_FILE" 2>/dev/null || \
+        echo "HOSTNAME=\"$HOSTNAME\"" >> "$CONFIG_FILE"
+
+    echo "Hostname set to: $hostname"
+}
+
+select_packages() {
+    echo ""
+    echo -e "${YELLOW}Package Selection${NC}"
+    echo "============================================"
+    echo "Select package groups to install:"
+    echo ""
+    echo "1) Base System (required)"
+    echo "2) Development Tools"
+    echo "3) System Utilities"
+    echo "4) Network Tools"
+    echo "5) Text Editors"
+    echo "6) Shell and Terminal"
+    echo "7) Hardware Support (GPU, Wi-Fi, etc.)"
+    echo "8) All of the above"
+    echo ""
+    echo -n "Choice [8]: "
+    read pkg_choice
+
+    case "$pkg_choice" in
+        1) export PACKAGES="base" ;;
+        2) export PACKAGES="base,development" ;;
+        3) export PACKAGES="base,system" ;;
+        4) export PACKAGES="base,network" ;;
+        5) export PACKAGES="base,editors" ;;
+        6) export PACKAGES="base,shell" ;;
+        7) export PACKAGES="base,hardware" ;;
+        *) export PACKAGES="base,development,system,network,editors,shell,hardware" ;;
+    esac
+
+    sed -i "s/^PACKAGES=.*/PACKAGES=\"$PACKAGES\"/" "$CONFIG_FILE" 2>/dev/null || \
+        echo "PACKAGES=\"$PACKAGES\"" >> "$CONFIG_FILE"
+}
+
+show_config() {
+    echo ""
+    echo -e "${CYAN}Installation Configuration Review${NC}"
+    echo "============================================"
+    echo "Language:           ${INSTALL_LANG:-English}"
+    echo "Target Disk:        ${TARGET_DISK:-Not selected}"
+    echo "Partition Type:     ${PART_TYPE:-Not selected}"
+    echo "Bootloader:         ${BOOTLOADER:-GRUB}"
+    echo "Boot Disk:          ${BOOT_DISK:-Not specified}"
+    echo "EFI Mode:           ${EFI_MODE:-Auto}"
+    echo "Hostname:           ${HOSTNAME:-opennebula}"
+    echo "Network Type:       ${NETWORK_TYPE:-DHCP}"
+    if [[ "$NETWORK_TYPE" == "static" ]]; then
+        echo "Static IP:          $STATIC_IP"
+        echo "Gateway:            $STATIC_GATEWAY"
+        echo "DNS:                $STATIC_DNS"
+    fi
+    echo "Packages:           ${PACKAGES:-base}"
+    echo ""
+    echo -n "Proceed with installation? (y/N): "
+    read confirm
+
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        echo "Installation cancelled"
+        exit 0
+    fi
+}
+
+setup_filesystem() {
+    local disk="$1"
+    local part_type="$2"
+
+    echo ""
+    echo -e "${YELLOW}Setting up filesystems on $disk${NC}"
+
+    if [[ "$part_type" == "lvm" ]]; then
+        pvcreate "$disk"
+        vgcreate openNebula "$disk"
+        lvcreate -L 2G openNebula -n swap
+        lvcreate -L 30G openNebula -n root
+        lvcreate -l 100%FREE openNebula -n home
+
+        mkswap /dev/mapper/openNebula-swap
+        mkfs.ext4 -L root /dev/mapper/openNebula-root
+        mkfs.ext4 -L home /dev/mapper/openNebula-home
+    else
+        if [[ "$EFI_MODE" == "yes" ]] || [[ "$EFI_MODE" == "auto" && -d /sys/firmware/efi ]]; then
+            mkfs.fat -F32 "${disk}1"
+            mkfs.ext4 -L root "${disk}2"
+            mkswap "${disk}3" 2>/dev/null || true
+        else
+            mkfs.ext4 -L root "${disk}1"
+            mkswap "${disk}2" 2>/dev/null || true
+        fi
+    fi
+
+    echo "Filesystems created"
+}
+
+mount_filesystems() {
+    echo ""
+    echo -e "${YELLOW}Mounting filesystems${NC}"
+
+    if [[ "$PART_TYPE" == "lvm" ]]; then
+        mount /dev/mapper/openNebula-root /mnt
+        mkdir -p /mnt/home
+        mount /dev/mapper/openNebula-home /mnt/home
+        swapon /dev/mapper/openNebula-swap
+    else
+        mount /dev/disk/by-label/root /mnt
+        mkdir -p /mnt/boot/efi 2>/dev/null || true
+    fi
+
+    mkdir -p /mnt/{etc,var,usr,home,boot,root,tmp}
+    chmod 1777 /mnt/tmp
+
+    echo "Filesystems mounted"
+}
+
+install_base_system() {
+    echo ""
+    echo -e "${YELLOW}Installing base system${NC}"
+
+    if [[ -d "/run/openNebula/repo" ]]; then
+        cp -r /run/openNebula/repo/* /mnt/
+    fi
+
+    if [[ -d "/run/openNebula/overlay" ]]; then
+        cp -r /run/openNebula/overlay/* /mnt/
+    fi
+
+    echo "Base system files copied"
+}
+
+configure_system() {
+    echo ""
+    echo -e "${YELLOW}Configuring system${NC}"
+
+    echo "$HOSTNAME" > /mnt/etc/hostname
+
+    cat > /mnt/etc/hosts << EOF
+127.0.0.1   localhost
+127.0.1.1   $HOSTNAME
+::1         localhost ip6-localhost ip6-loopback
+ff02::1     ip6-allnodes
+ff02::2     ip6-allrouters
+EOF
+
+    if [[ -n "$USER_NAME" ]]; then
+        useradd -m -s /bin/bash -G wheel,audio,video,usb,uucp "$USER_NAME"
+        echo "$USER_NAME:$USER_PASS" | chpasswd -R /mnt
+    fi
+
+    echo "root:$ROOT_PASS" | chpasswd -R /mnt
+
+    if [[ "$NETWORK_TYPE" == "static" ]]; then
+        cat > /mnt/etc/conf.d/net << EOF
+config_eth0="$STATIC_IP netmask $STATIC_NETMASK"
+routes_eth0="default via $STATIC_GATEWAY"
+EOF
+    fi
+
+    cat > /mnt/etc/os-release << 'EOF'
+NAME="openNebula"
+VERSION="1.0.0 (Stellar)"
+ID=opennebula
+PRETTY_NAME="openNebula Linux"
+VERSION_ID="1.0.0"
+EOF
+
+    echo "System configured"
+}
+
+install_bootloader() {
+    echo ""
+    echo -e "${YELLOW}Installing bootloader${NC}"
+
+    if [[ "$BOOTLOADER" == "grub" ]]; then
+        if command -v grub-install >/dev/null 2>&1; then
+            grub-install --target=i386-pc "$BOOT_DISK" 2>/dev/null || \
+            grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=openNebula "$BOOT_DISK" 2>/dev/null || true
+        fi
+
+        cat > /mnt/etc/default/grub << 'EOF'
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="openNebula"
+GRUB_CMDLINE_LINUX="quiet splash"
+GRUB_DISABLE_RECOVERY="true"
+EOF
+    elif [[ "$BOOTLOADER" == "systemd-boot" ]]; then
+        if command -v bootctl >/dev/null 2>&1; then
+            bootctl --path=/mnt/boot install
+        fi
+    fi
+
+    echo "Bootloader installed"
+}
+
+finalize_installation() {
+    echo ""
+    echo -e "${YELLOW}Finalizing installation${NC}"
+
+    if command -v ldconfig >/dev/null 2>&1; then
+        ldconfig -r /mnt
+    fi
+
+    if [[ -f /mnt/etc/star/repos.conf ]]; then
+        sed -i 's|https://repo.opennebula.io|/var/lib/star/repo|g' /mnt/etc/star/repos.conf
+    fi
+
+    cat > /mnt/etc/sudoers.d/openNebula << 'EOF'
+%wheel ALL=(ALL) ALL
+EOF
+
+    chmod 440 /mnt/etc/sudoers.d/openNebula
+
+    echo ""
+    echo -e "${GREEN}============================================"
+    echo "Installation complete!"
+    echo -e "${GREEN}============================================"
+    echo ""
+    echo "Please reboot your system."
+    echo "The installer will exit and you can restart."
+    echo ""
+}
+
+run_installation() {
+    show_banner
+    echo -e "${GREEN}Starting installation process...${NC}"
+    echo ""
+
+    mkdir -p /mnt
+
+    if [[ -z "$TARGET_DISK" ]]; then
+        echo -e "${RED}Error: No target disk selected${NC}"
+        return 1
+    fi
+
+    log "Starting installation to $TARGET_DISK"
+
+    if [[ "$PART_TYPE" != "manual" ]]; then
+        setup_filesystem "$TARGET_DISK" "$PART_TYPE"
+    fi
+
+    mount_filesystems
+    install_base_system
+    configure_system
+    install_bootloader
+    finalize_installation
+
+    log "Installation completed successfully"
+}
+
+init_config() {
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        cat > "$CONFIG_FILE" << 'EOF'
+INSTALL_LANG="en_US.UTF-8"
+TARGET_DISK=""
+PART_TYPE=""
+BOOTLOADER="grub"
+BOOT_DISK=""
+EFI_MODE="auto"
+HOSTNAME="opennebula"
+NETWORK_TYPE="dhcp"
+PACKAGES="base"
+ROOT_PASS=""
+USER_NAME=""
+USER_PASS=""
+EOF
+    fi
+
+    source "$CONFIG_FILE"
+}
+
+main() {
+    mkdir -p "$(dirname "$INSTALL_LOG")"
+    touch "$INSTALL_LOG"
+    chmod 644 "$INSTALL_LOG"
+
+    init_config
+    show_banner
+
+    echo -e "${CYAN}Welcome to openNebula Linux Installer${NC}"
+    echo ""
+    echo "This installer will guide you through the process of"
+    echo "installing openNebula Linux on your system."
+    echo ""
+    echo -n "Press Enter to continue... "
+    read
+
+    while true; do
+        show_main_menu
+        read main_choice
+
+        case "$main_choice" in
+            1) set_language ;;
+            2) configure_network ;;
+            3) partition_disk "${TARGET_DISK:-/dev/sda}" ;;
+            4) select_disk ;;
+            5) configure_bootloader ;;
+            6) create_users ;;
+            7) set_hostname ;;
+            8) select_packages ;;
+            9) show_config ;;
+            10) run_installation ;;
+            11)
+                echo "Exiting installer..."
+                exit 0
+                ;;
+            *)
+                echo -e "${RED}Invalid option${NC}"
+                ;;
+        esac
+
+        echo ""
+        echo -n "Press Enter to continue... "
+        read
+    done
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    if [[ $EUID -ne 0 ]]; then
+        echo "This script must be run as root"
+        exit 1
+    fi
+
+    main "$@"
+fi

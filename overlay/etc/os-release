@@ -1,0 +1,16 @@
+NAME="openNebula"
+VERSION="1.0.0 (twix)"
+ID=opennebula
+ID_LIKE="openNebula"
+PRETTY_NAME="openNebula"
+VERSION_ID="1.0.0"
+VERSION_CODE="1"
+HOME_URL="https://openNebulaOS.github.io/main"
+DOCUMENTATION_URL="https://openNebulaOS.github.io/docs"
+SUPPORT_URL="https://discord.gg/cNJVZBWE9j"
+BUG_REPORT_URL="https://github.com/openNebulaOS/build/issues"
+PRIVACY_POLICY_URL="https://openNebulaOS.github.io/main/privacy"
+BUILD_ID="rolling"
+ANSI_COLOR="38;2;59;130;246"
+LOGO=opennebula
+CPE_NAME="cpe:/o:opennebula:linux:1.0.0"

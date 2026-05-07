@@ -1,0 +1,56 @@
+#!/bin/bash
+
+REPO_NAME="openNebula"
+REPO_VERSION="1.0.0"
+REPO_DIR="${REPO_DIR:-/var/lib/star/repo}"
+REPO_SIGN_KEY="${REPO_SIGN_KEY:-}"
+
+mkdir -p "$REPO_DIR/packages"
+mkdir -p "$REPO_DIRindices"
+
+generate_index() {
+    echo "Generating package index for $REPO_NAME..."
+
+    local index_file="$REPO_DIR/packages/index.xz"
+    local packages_list="$REPO_DIR/packages/packages.list"
+
+    rm -f "$packages_list"
+
+    for pkg in "$REPO_DIR/packages"/*.star.xz; do
+        [[ -f "$pkg" ]] || continue
+
+        local pkg_name=$(basename "$pkg" .star.xz)
+        echo "$pkg_name|No description available|1.0.0" >> "$packages_list"
+    done
+
+    tar -cJf "$index_file" -C "$REPO_DIR/packages" .
+}
+
+sign_repo() {
+    if [[ -n "$REPO_SIGN_KEY" ]] && command -v gpg >/dev/null 2>&1; then
+        echo "Signing repository..."
+        gpg --batch --yes --armor --detach-sign --default-key "$REPO_SIGN_KEY" \
+            "$REPO_DIR/packages/index.xz"
+        gpg --batch --yes --armor --detach-sign --default-key "$REPO_SIGN_KEY" \
+            "$REPO_DIR/packages/packages.list"
+    fi
+}
+
+verify_repo() {
+    if command -v gpg >/dev/null 2>&1; then
+        echo "Verifying repository signatures..."
+        if [[ -f "$REPO_DIR/packages/index.xz.asc" ]]; then
+            gpg --verify "$REPO_DIR/packages/index.xz.asc" "$REPO_DIR/packages/index.xz"
+        fi
+    fi
+}
+
+main() {
+    generate_index
+    sign_repo
+    verify_repo
+
+    echo "Repository $REPO_NAME ready at $REPO_DIR"
+}
+
+main "$@"

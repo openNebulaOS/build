@@ -1,0 +1,14 @@
+PKG_NAME="sqlite"
+PKG_VERSION="3.45"
+PKG_SOURCE="https://www.sqlite.org/2024/sqlite-autoconf-3450100.tar.gz"
+PKG_DEPS="glibc"
+PKG_BUILD_DEPS="tcl"
+PKG_DESCRIPTION="SQLite database engine"
+PKG_LICENSE="Public Domain"
+PKG_ARCH="x86_64"
+
+build() {
+    ./configure --prefix=/usr --disable-static
+    make
+    make install
+}

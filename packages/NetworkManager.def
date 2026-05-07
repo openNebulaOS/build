@@ -1,0 +1,12 @@
+PKG_NAME="NetworkManager"
+PKG_VERSION="1.44"
+PKG_SOURCE="https://download.gnome.org/sources/NetworkManager/1.44/NetworkManager-${PKG_VERSION}.tar.xz"
+PKG_DEPS="dbus-glib glib iptables libnm libndp udev"
+PKG_DESCRIPTION="Network connection daemon"
+
+build() {
+    meson setup build --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        -Ddistrousers=false
+    ninja -C build
+    ninja -C build install
+}

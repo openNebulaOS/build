@@ -1,0 +1,18 @@
+PKG_NAME="firmware"
+PKG_VERSION="20240115"
+PKG_RELEASE="1"
+PKG_SOURCE=""
+PKG_DEPS=""
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="Firmware blobs for various hardware"
+PKG_LICENSE="Proprietary"
+PKG_ARCH="x86_64"
+
+star_install() {
+    install -d /usr/lib/firmware
+    install -m644 firmware/*.bin /usr/lib/firmware/ 2>/dev/null || true
+    install -m644 firmware/radeon/*.bin /usr/lib/firmware/radeon/ 2>/dev/null || true
+    install -m644 firmware/i915/*.bin /usr/lib/firmware/i915/ 2>/dev/null || true
+    install -m644 firmware/rtl_nic/*.bin /usr/lib/firmware/rtl_nic/ 2>/dev/null || true
+    install -m644 firmware/ti-connectivity/*.bin /usr/lib/firmware/ti-connectivity/ 2>/dev/null || true
+}

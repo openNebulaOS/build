@@ -1,0 +1,15 @@
+PKG_NAME="udev"
+PKG_VERSION="254"
+PKG_SOURCE="https://github.com/systemd/systemd/archive/refs/tags/v254.tar.gz"
+PKG_DEPS="glibc libcap kmod gzip"
+PKG_BUILD_DEPS="gcc make meson ninja pkg-config"
+PKG_DESCRIPTION="Device manager"
+PKG_LICENSE="LGPL-2.1"
+PKG_ARCH="x86_64"
+
+build() {
+    meson setup build --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        -Dmode=release -Dman=false -Dtests=false -Dfuzz-tests=false
+    ninja -C build
+    ninja -C build install
+}

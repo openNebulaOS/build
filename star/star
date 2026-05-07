@@ -1,0 +1,404 @@
+#!/bin/bash
+set -e
+
+VERSION="1.0.0"
+STAR_DB="/var/lib/star/db"
+STAR_CACHE="/var/cache/star/pkg"
+STAR_CONF="/etc/star/repos.conf"
+STAR_LOG="/var/log/star/star.log"
+
+command -v basename >/dev/null 2>&1 || { echo "basename not found" >&2; exit 1; }
+command -v dirname >/dev/null 2>&1 || { echo "dirname not found" >&2; exit 1; }
+command -v tar >/dev/null 2>&1 || { echo "tar not found" >&2; exit 1; }
+command -v gzip >/dev/null 2>&1 || { echo "gzip not found" >&2; exit 1; }
+command -v xz >/dev/null 2>&1 || { echo "xz not found" >&2; exit 1; }
+command -v bzip2 >/dev/null 2>&1 || { echo "bzip2 not found" >&2; exit 1; }
+
+log() {
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    echo "$msg" >> "$STAR_LOG"
+    echo "$msg"
+}
+
+init_db() {
+    mkdir -p "$STAR_DB" "$STAR_CACHE" "$(dirname "$STAR_LOG")"
+    touch "$STAR_DB/packages.db" "$STAR_DB/files.db" "$STAR_DB/dependencies.db"
+    chmod 644 "$STAR_DB"/*.db 2>/dev/null || true
+}
+
+load_repos() {
+    if [[ ! -f "$STAR_CONF" ]]; then
+        cat > "$STAR_CONF" << 'EOF'
+[openNebula]
+url=https://openNebulaOS.github.io/repo/stable
+enabled=1
+priority=1
+
+[openNebula-extra]
+url=https://openNebulaOS.github.io/repo/extra
+enabled=1
+priority=2
+EOF
+    fi
+    declare -gA REPOS
+    while IFS='=' read -r key value; do
+        [[ "$key" =~ ^\[(.*)\]$ ]] && current_repo="${BASH_REMATCH[1]}" && continue
+        [[ -z "$current_repo" ]] && continue
+        REPOS["${current_repo}_${key}"]="$value"
+    done < "$STAR_CONF"
+}
+
+get_repo_url() {
+    local repo="$1"
+    echo "${REPOS["${repo}_url"]:-}"
+}
+
+get_repo_enabled() {
+    local repo="$1"
+    local enabled="${REPOS["${repo}_enabled"]:-0}"
+    [[ "$enabled" == "1" ]]
+}
+
+star_get() {
+    local pkgname="$1"
+    local pkgfile=""
+
+    log "INFO: Getting package: $pkgname"
+
+    if [[ -z "$pkgname" ]]; then
+        echo "Error: Package name required"
+        echo "Usage: star get <package_name>"
+        return 1
+    fi
+
+    for repo in "${!REPOS[@]}"; do
+        [[ "$repo" =~ ^(.*)_url$ ]] || continue
+        local repo_name="${BASH_REMATCH[1]}"
+        get_repo_enabled "$repo_name" || continue
+
+        local repo_url="${REPOS["${repo_name}_url"]}"
+        local pkg_url="${repo_url}/packages/${pkgname}.star.xz"
+
+        if curl --silent --fail -o "/tmp/${pkgname}.star.xz" "$pkg_url" 2>/dev/null; then
+            pkgfile="/tmp/${pkgname}.star.xz"
+            break
+        fi
+    done
+
+    if [[ -z "$pkgfile" ]] || [[ ! -f "$pkgfile" ]]; then
+        echo "Error: Package '$pkgname' not found in repositories"
+        return 1
+    fi
+
+    local pkg_tmp="/tmp/${pkgname}.star.extract"
+    rm -rf "$pkg_tmp"
+    mkdir -p "$pkg_tmp"
+
+    tar -xJf "$pkgfile" -C "$pkg_tmp"
+
+    if [[ ! -f "$pkg_tmp/star-pkg.sh" ]]; then
+        echo "Error: Invalid package format"
+        rm -rf "$pkg_tmp" "$pkgfile"
+        return 1
+    fi
+
+    source "$pkg_tmp/star-pkg.sh"
+
+    mkdir -p "$STAR_CACHE"
+    cp "$pkgfile" "$STAR_CACHE/${pkgname}.star.xz"
+
+    mkdir -p "$pkg_tmp/install"
+    tar -xJf "$pkgfile" -C "$pkg_tmp/install" --strip-components=1 2>/dev/null || \
+    tar -xJf "$pkgfile" -C "$pkg_tmp/install" 2>/dev/null || true
+
+    echo "Installing $pkgname..."
+    if type star_install >/dev/null 2>&1; then
+        star_install "$pkg_tmp/install"
+    fi
+
+    echo "$pkgname" >> "$STAR_DB/installed.pkgs"
+    echo "$pkgname|$VERSION|$(date +%s)" >> "$STAR_DB/packages.db"
+
+    rm -rf "$pkg_tmp" "$pkgfile"
+
+    log "INFO: Installed package: $pkgname"
+    echo "Package '$pkgname' installed successfully"
+}
+
+star_remove() {
+    local pkgname="$1"
+
+    log "INFO: Removing package: $pkgname"
+
+    if [[ -z "$pkgname" ]]; then
+        echo "Error: Package name required"
+        echo "Usage: star remove <package_name>"
+        return 1
+    fi
+
+    if ! grep -q "^${pkgname}$" "$STAR_DB/installed.pkgs" 2>/dev/null; then
+        echo "Error: Package '$pkgname' is not installed"
+        return 1
+    fi
+
+    local pkg_info=$(grep "^${pkgname}|" "$STAR_DB/packages.db" | head -1)
+    local pkg_version="${pkg_info%|*}"
+    pkg_version="${pkg_version##*|}"
+
+    local pkg_cache="$STAR_CACHE/${pkgname}.star.xz"
+    if [[ -f "$pkg_cache" ]]; then
+        local pkg_tmp="/tmp/${pkgname}.star.extract"
+        rm -rf "$pkg_tmp"
+        mkdir -p "$pkg_tmp"
+        tar -xJf "$pkg_cache" -C "$pkg_tmp"
+
+        if type star_remove >/dev/null 2>&1; then
+            source "$pkg_tmp/star-pkg.sh"
+            star_remove
+        fi
+
+        rm -rf "$pkg_tmp"
+    fi
+
+    sed -i "/^${pkgname}$/d" "$STAR_DB/installed.pkgs"
+    sed -i "/^${pkgname}|/d" "$STAR_DB/packages.db"
+    sed -i "/^${pkgname}|/d" "$STAR_DB/files.db"
+    sed -i "/^${pkgname}|/d" "$STAR_DB/dependencies.db"
+
+    rm -f "$pkg_cache"
+
+    log "INFO: Removed package: $pkgname"
+    echo "Package '$pkgname' removed successfully"
+}
+
+star_search() {
+    local pattern="$1"
+
+    log "INFO: Searching for: $pattern"
+
+    if [[ -z "$pattern" ]]; then
+        echo "Error: Search pattern required"
+        echo "Usage: star search <package_name>"
+        return 1
+    fi
+
+    echo "Searching for '$pattern' in repositories..."
+    echo ""
+
+    local results=()
+    for repo in "${!REPOS[@]}"; do
+        [[ "$repo" =~ ^(.*)_url$ ]] || continue
+        local repo_name="${BASH_REMATCH[1]}"
+        get_repo_enabled "$repo_name" || continue
+
+        local repo_url="${REPOS["${repo_name}_url"]}"
+        local index_url="${repo_url}/packages/index.xz"
+
+        local index_file="/tmp/star-index-${repo_name}.xz"
+        if curl --silent --fail -o "$index_file" "$index_url" 2>/dev/null; then
+            local index_tmp="/tmp/star-index-${repo_name}"
+            rm -rf "$index_tmp"
+            mkdir -p "$index_tmp"
+            tar -xJf "$index_file" -C "$index_tmp"
+
+            if [[ -f "$index_tmp/packages.list" ]]; then
+                while IFS='|' read -r name desc ver; do
+                    if [[ "$name" =~ $pattern ]] || [[ "$desc" =~ $pattern ]]; then
+                        results+=("$name|$desc|$ver|$repo_name")
+                    fi
+                done < "$index_tmp/packages.list"
+            fi
+
+            rm -rf "$index_tmp"
+        fi
+        rm -f "$index_file"
+    done
+
+    if [[ ${#results[@]} -eq 0 ]]; then
+        echo "No packages found matching '$pattern'"
+        return 1
+    fi
+
+    printf "%-25s %-10s %-15s %s\n" "PACKAGE" "VERSION" "REPOSITORY" "DESCRIPTION"
+    printf "%-25s %-10s %-15s %s\n" "-------" "-------" "-----------" "-----------"
+    for result in "${results[@]}"; do
+        IFS='|' read -r name desc ver repo <<< "$result"
+        printf "%-25s %-10s %-15s %s\n" "$name" "$ver" "$repo" "${desc:-No description}"
+    done
+}
+
+star_update() {
+    log "INFO: Updating package databases"
+
+    echo "Updating package databases..."
+    echo ""
+
+    for repo in "${!REPOS[@]}"; do
+        [[ "$repo" =~ ^(.*)_url$ ]] || continue
+        local repo_name="${BASH_REMATCH[1]}"
+        get_repo_enabled "$repo_name" || continue
+
+        local repo_url="${REPOS["${repo_name}_url"]}"
+        local db_path="${repo_url}/packages/index.xz"
+
+        echo "  Updating ${repo_name}..."
+
+        local index_file="/tmp/star-index-${repo_name}.xz"
+        if curl --silent --fail -o "$index_file" "$db_path" 2>/dev/null; then
+            mkdir -p "$STAR_DB/repos/${repo_name}"
+            tar -xJf "$index_file" -C "$STAR_DB/repos/${repo_name}" --strip-components=1 2>/dev/null || true
+            echo "    ${repo_name} updated successfully"
+        else
+            echo "    Failed to update ${repo_name}"
+        fi
+        rm -f "$index_file"
+    done
+
+    log "INFO: Package databases updated"
+    echo ""
+    echo "Update complete"
+}
+
+star_upgrade() {
+    log "INFO: Upgrading installed packages"
+
+    echo "Upgrading installed packages..."
+    echo ""
+
+    if [[ ! -f "$STAR_DB/installed.pkgs" ]]; then
+        echo "No packages installed"
+        return 0
+    fi
+
+    local upgrades=0
+    while IFS= read -r pkgname; do
+        [[ -z "$pkgname" ]] && continue
+
+        local current_info=$(grep "^${pkgname}|" "$STAR_DB/packages.db" | head -1)
+        [[ -z "$current_info" ]] && continue
+
+        local current_ver="${current_info##*|}"
+
+        for repo in "${!REPOS[@]}"; do
+            [[ "$repo" =~ ^(.*)_url$ ]] || continue
+            local repo_name="${BASH_REMATCH[1]}"
+            local repo_db="$STAR_DB/repos/${repo_name}/packages.list"
+
+            if [[ -f "$repo_db" ]]; then
+                local new_info=$(grep "^${pkgname}|" "$repo_db" 2>/dev/null | head -1)
+                if [[ -n "$new_info" ]]; then
+                    local new_ver="${new_info##*|}"
+                    if [[ "$new_ver" != "$current_ver" ]]; then
+                        echo "Upgrading $pkgname ($current_ver -> $new_ver)..."
+                        star_get "$pkgname"
+                        ((upgrades++))
+                    fi
+                fi
+            fi
+        done
+    done < "$STAR_DB/installed.pkgs"
+
+    if [[ $upgrades -eq 0 ]]; then
+        echo "All packages are up to date"
+    else
+        echo ""
+        echo "Upgraded $upgrades package(s)"
+    fi
+
+    log "INFO: Upgrade complete"
+}
+
+star_list() {
+    echo "Installed packages:"
+    echo ""
+
+    if [[ ! -f "$STAR_DB/installed.pkgs" ]] || [[ ! -s "$STAR_DB/installed.pkgs" ]]; then
+        echo "No packages installed"
+        return 0
+    fi
+
+    while IFS= read -r pkgname; do
+        [[ -z "$pkgname" ]] && continue
+        local info=$(grep "^${pkgname}|" "$STAR_DB/packages.db" 2>/dev/null | head -1)
+        local ver="${info##*|}"
+        echo "  ${pkgname} - ${ver}"
+    done < "$STAR_DB/installed.pkgs"
+}
+
+star_info() {
+    local pkgname="$1"
+
+    if [[ -z "$pkgname" ]]; then
+        echo "Error: Package name required"
+        echo "Usage: star info <package_name>"
+        return 1
+    fi
+
+    local installed_info=$(grep "^${pkgname}|" "$STAR_DB/packages.db" 2>/dev/null | head -1)
+
+    if [[ -n "$installed_info" ]]; then
+        echo "Package: $pkgname"
+        echo "Version: ${installed_info##*|}"
+        echo "Status: Installed"
+    else
+        echo "Package: $pkgname"
+        echo "Status: Not installed"
+    fi
+}
+
+show_help() {
+    cat << 'EOF'
+star - openNebula Package Manager
+
+Usage: star <command> [options]
+
+Commands:
+    get <package>      Download and install a package
+    remove <package>   Remove an installed package
+    search <pattern>   Search for packages
+    update             Update package databases
+    upgrade            Upgrade installed packages
+    list               List installed packages
+    info <package>     Show package information
+    help               Show this help message
+
+Options:
+    -h, --help         Show help for a command
+
+Examples:
+    star get vim
+    star remove vim
+    star search python
+    star update
+    star upgrade
+
+For more information, see star(8) man page.
+EOF
+}
+
+main() {
+    init_db
+    load_repos
+
+    if [[ $# -eq 0 ]]; then
+        show_help
+        exit 0
+    fi
+
+    case "$1" in
+        get) shift; star_get "$@" ;;
+        remove) shift; star_remove "$@" ;;
+        search) shift; star_search "$@" ;;
+        update) star_update ;;
+        upgrade) star_upgrade ;;
+        list) star_list ;;
+        info) shift; star_info "$@" ;;
+        -h|--help) show_help ;;
+        help) show_help ;;
+        *) echo "Unknown command: $1" ; show_help ; exit 1 ;;
+    esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

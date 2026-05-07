@@ -1,0 +1,16 @@
+PKG_NAME="mariadb"
+PKG_VERSION="11.3"
+PKG_SOURCE="https://archive.mariadb.org/mariadb-11.3.2/source/mariadb-11.3.2.tar.gz"
+PKG_DEPS="bzip2 libevent ncurses openssl zlib"
+PKG_BUILD_DEPS="bison cmake gcc ninja"
+PKG_DESCRIPTION="MySQL-compatible database"
+PKG_LICENSE="GPL-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    mkdir build && cd build
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_CONFIG=mysql_release
+    make
+    make install
+}

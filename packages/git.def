@@ -1,0 +1,12 @@
+PKG_NAME="git"
+PKG_VERSION="2.43"
+PKG_SOURCE="https://github.com/git/git/archive/refs/tags/v${PKG_VERSION}.tar.gz"
+PKG_DEPS="curl openssl pcre2 zlib"
+PKG_DESCRIPTION="Distributed version control system"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --with-curl --with-openssl --with-libpcre2
+    make
+    make install
+}

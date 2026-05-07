@@ -1,0 +1,15 @@
+PKG_NAME="libvirt"
+PKG_VERSION="10.0"
+PKG_SOURCE="https://www.libvirt.org/releases/libvirt-10.0.0.tar.xz"
+PKG_DEPS="dbus glib2 libxml2 numactl parted policycoreutils xorgproto"
+PKG_BUILD_DEPS="gcc make meson ninja pkg-config"
+PKG_DESCRIPTION="Virtualization API"
+PKG_LICENSE="LGPL-2.1"
+PKG_ARCH="x86_64"
+
+build() {
+    meson setup build --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        -Drunstatedir=/run
+    ninja -C build
+    ninja -C build install
+}

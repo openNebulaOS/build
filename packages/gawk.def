@@ -1,0 +1,12 @@
+PKG_NAME="gawk"
+PKG_VERSION="5.3"
+PKG_SOURCE="https://ftp.gnu.org/gnu/gawk/gawk-${PKG_VERSION}.tar.gz"
+PKG_DEPS="glibc mpfr readline"
+PKG_DESCRIPTION="GNU awk"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --with-libintl-prefix
+    make
+    make install
+}

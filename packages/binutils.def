@@ -1,0 +1,18 @@
+PKG_NAME="binutils"
+PKG_VERSION="2.41"
+PKG_RELEASE="1"
+PKG_SOURCE="https://ftp.gnu.org/gnu/binutils/binutils-2.41.tar.xz"
+PKG_DEPS="glibc zlib"
+PKG_BUILD_DEPS="gcc bison flex"
+PKG_DESCRIPTION="GNU binary utilities"
+PKG_LICENSE="GPL-3.0"
+PKG_ARCH="x86_64"
+
+build_binutils() {
+    mkdir build
+    cd build
+    ../configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --disable-nls --disable-relro
+    make -j$(nproc)
+    make install
+}

@@ -1,0 +1,18 @@
+PKG_NAME="clang"
+PKG_VERSION="17"
+PKG_SOURCE="https://github.com/llvm/llvm-project/releases/download/llvmorg-17.0.6/clang-17.0.6.src.tar.xz"
+PKG_DEPS="llvm"
+PKG_BUILD_DEPS="cmake ninja"
+PKG_DESCRIPTION="C language family frontend"
+PKG_LICENSE="Apache-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    mkdir build && cd build
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DLLVM_DIR=/usr/lib/llvm-17/cmake \
+        ../clang
+    ninja
+    ninja install
+}

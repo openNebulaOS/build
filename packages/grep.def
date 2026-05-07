@@ -1,0 +1,12 @@
+PKG_NAME="grep"
+PKG_VERSION="3.11"
+PKG_SOURCE="https://ftp.gnu.org/gnu/grep/grep-${PKG_VERSION}.tar.xz"
+PKG_DEPS="glibc pcre2"
+PKG_DESCRIPTION="GNU grep utility"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --with-pcre2
+    make
+    make install
+}

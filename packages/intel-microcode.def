@@ -1,0 +1,14 @@
+PKG_NAME="intel-microcode"
+PKG_VERSION="20240115"
+PKG_RELEASE="1"
+PKG_SOURCE="https://downloadmirror.intel.com/POST/snapshot/Intel-Processor-Vu-20240115.tgz"
+PKG_DEPS="iucode-tool"
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="Intel CPU microcode updates"
+PKG_LICENSE="Intel"
+PKG_ARCH="x86_64"
+
+star_install() {
+    install -Dm644 intel-ucode/*.cce /lib/firmware/intel-ucode/
+    install -Dm644 intel-ucode/06-*.cce /lib/firmware/intel-ucode/ 2>/dev/null || true
+}

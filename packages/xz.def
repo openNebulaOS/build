@@ -1,0 +1,12 @@
+PKG_NAME="xz"
+PKG_VERSION="5.4"
+PKG_SOURCE="https://tukaani.org/xz/xz-${PKG_VERSION}.tar.xz"
+PKG_DEPS="glibc"
+PKG_DESCRIPTION="XZ compression utility"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --disable-doc
+    make
+    make install
+}

@@ -1,0 +1,14 @@
+PKG_NAME="ruby"
+PKG_VERSION="3.3"
+PKG_SOURCE="https://cache.ruby-lang.org/pub/ruby/3.3/ruby-3.3.0.tar.xz"
+PKG_DEPS="gdbm glibc gmp libffi libyaml openssl zlib"
+PKG_BUILD_DEPS="bison gcc make"
+PKG_DESCRIPTION="Ruby programming language"
+PKG_LICENSE="BSD-2-Clause"
+PKG_ARCH="x86_64"
+
+build() {
+    ./configure --prefix=/usr --enable-shared
+    make
+    make install
+}

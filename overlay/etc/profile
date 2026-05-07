@@ -1,0 +1,21 @@
+if [[ -z "$POSIXLY_CORRECT" ]]; then
+    bind 'set enable-bracketed-paste off' 2>/dev/null || true
+fi
+
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+if [[ $EUID -eq 0 ]]; then
+    PS1='\[\033[0;31m\][root@$(hostname)]:/$\[\033[0m\] '
+else
+    PS1='\[\033[0;32m\][\u@\h]:/$\[\033[0m\] '
+fi
+
+export PS1
+
+for script in /etc/profile.d/*.sh; do
+    if [[ -r "$script" ]]; then
+        source "$script"
+    fi
+done
+
+unset script

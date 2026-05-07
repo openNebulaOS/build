@@ -1,0 +1,14 @@
+PKG_NAME="iptables"
+PKG_VERSION="1.8"
+PKG_SOURCE="https://www.netfilter.org/projects/iptables/files/iptables-1.8.10.tar.gz"
+PKG_DEPS="glibc libmnl libnftnl"
+PKG_BUILD_DEPS="bison flex gcc make pkg-config"
+PKG_DESCRIPTION="IPv4/IPv6 packet filtering"
+PKG_LICENSE="GPL-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+    make
+    make install
+}

@@ -1,0 +1,11 @@
+PKG_NAME="sed"
+PKG_VERSION="4.9"
+PKG_SOURCE="https://ftp.gnu.org/gnu/sed/sed-${PKG_VERSION}.tar.gz"
+PKG_DEPS="glibc"
+PKG_DESCRIPTION="GNU stream editor"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+    make
+    make install
+}

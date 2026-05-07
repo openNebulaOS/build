@@ -1,0 +1,12 @@
+PKG_NAME="sudo"
+PKG_VERSION="1.9.14"
+PKG_SOURCE="https://www.sudo.ws/dist/sudo-${PKG_VERSION}.tar.gz"
+PKG_DEPS="zlib openssl"
+PKG_DESCRIPTION="Executive for restricted superuser operations"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --enable-shell-sets-home --with-editor=/usr/bin/vi
+    make
+    make install
+}

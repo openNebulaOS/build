@@ -1,0 +1,14 @@
+PKG_NAME="openssl"
+PKG_VERSION="3.2"
+PKG_SOURCE="https://www.openssl.org/source/openssl-3.2.1.tar.gz"
+PKG_DEPS="zlib perl"
+PKG_BUILD_DEPS="gcc make"
+PKG_DESCRIPTION="SSL/TLS toolkit"
+PKG_LICENSE="Apache-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    ./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib
+    make
+    make install
+}

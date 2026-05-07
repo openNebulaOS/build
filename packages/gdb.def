@@ -1,0 +1,14 @@
+PKG_NAME="gdb"
+PKG_VERSION="14"
+PKG_SOURCE="https://ftp.gnu.org/gnu/gdb/gdb-14.1.tar.gz"
+PKG_DEPS="glibc libmpdec libreadline python3"
+PKG_BUILD_DEPS="gcc make autoconf automake libtool pkg-config"
+PKG_DESCRIPTION="GNU debugger"
+PKG_LICENSE="GPL-3.0"
+PKG_ARCH="x86_64"
+
+build() {
+    ./configure --prefix=/usr --with-python=/usr/bin/python3
+    make
+    make install
+}

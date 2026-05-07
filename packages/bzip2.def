@@ -1,0 +1,14 @@
+PKG_NAME="bzip2"
+PKG_VERSION="1.0"
+PKG_SOURCE="https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"
+PKG_DEPS="glibc"
+PKG_BUILD_DEPS="gcc make"
+PKG_DESCRIPTION="Block-sorting file compressor"
+PKG_LICENSE="BSD-1-Clause"
+PKG_ARCH="x86_64"
+
+build() {
+    make -f Makefile-libbz2_so
+    make
+    make install
+}

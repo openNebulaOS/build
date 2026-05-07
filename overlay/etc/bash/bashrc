@@ -1,0 +1,13 @@
+if [[ $EUID -eq 0 ]]; then
+    PS1='\[\033[0;31m\][root@$(hostname)]:/$\[\033[0m\] '
+else
+    PS1='\[\033[0;32m\][\u@\h]:/$\[\033[0m\] '
+fi
+
+export PS1
+
+case "$TERM" in
+    xterm*|rxvt*|screen*)
+        PS1="\[\033]0;${PS1}\007\]${PS1}"
+        ;;
+esac

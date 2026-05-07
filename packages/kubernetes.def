@@ -1,0 +1,12 @@
+PKG_NAME="kubernetes"
+PKG_VERSION="1.29"
+PKG_SOURCE="https://dl.k8s.io/release/v1.29.2/bin/linux/amd64/kubernetes.tar.gz"
+PKG_DEPS="conntrack iptables"
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="Container orchestration"
+PKG_LICENSE="Apache-2.0"
+PKG_ARCH="x86_64"
+
+star_install() {
+    tar -C /usr -xf "\$PKG_SOURCE"
+}

@@ -1,0 +1,11 @@
+PKG_NAME="findutils"
+PKG_VERSION="5.25"
+PKG_SOURCE="https://ftp.gnu.org/gnu/findutils/findutils-${PKG_VERSION}.tar.gz"
+PKG_DEPS="glibc"
+PKG_DESCRIPTION="GNU find utility"
+
+build() {
+    ./configure --prefix=/usr --localstatedir=/var
+    make
+    make install
+}

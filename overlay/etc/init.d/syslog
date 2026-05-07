@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+name="System Logging"
+description="OpenRC system logging"
+command="/usr/sbin/syslog-ng"
+pidfile="/run/syslog-ng.pid"
+command_background=true
+
+depend() {
+    need net
+    after *
+}

@@ -1,0 +1,14 @@
+PKG_NAME="qemu"
+PKG_VERSION="8.2"
+PKG_SOURCE="https://download.qemu.org/qemu-8.2.0.tar.xz"
+PKG_DEPS="glibc libpng libjpeg pixman zlib SDL2"
+PKG_BUILD_DEPS="ninja meson python3"
+PKG_DESCRIPTION="QEMU emulator"
+PKG_LICENSE="LGPL-2.1"
+PKG_ARCH="x86_64"
+
+build() {
+    meson setup build --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+    ninja -C build
+    ninja -C build install
+}

@@ -1,0 +1,12 @@
+#!/sbin/openrc-run
+name="Device Manager"
+description="OpenRC Device Manager service"
+command="/sbin/udevd"
+command_args="-d"
+pidfile="/run/udev.pid"
+respawn_delay="5"
+
+depend() {
+    need sysfs
+    after sysfs
+}

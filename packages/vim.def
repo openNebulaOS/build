@@ -1,0 +1,12 @@
+PKG_NAME="vim"
+PKG_VERSION="9.1"
+PKG_SOURCE="https://github.com/vim/vim/archive/refs/tags/v${PKG_VERSION}.tar.gz"
+PKG_DEPS="ncurses gettext acl gpm"
+PKG_DESCRIPTION="Vi IMproved"
+
+build() {
+    ./configure --prefix=/usr --enable-gui=no --with-x=no \
+        --without-gnome --disable-gpm --disable-acl
+    make
+    make install
+}

@@ -1,0 +1,14 @@
+PKG_NAME="attr"
+PKG_VERSION="2.5"
+PKG_SOURCE="https://download.savannah.gnu.org/releases/attr/attr-2.5.1.tar.gz"
+PKG_DEPS="glibc"
+PKG_BUILD_DEPS="gcc make"
+PKG_DESCRIPTION="Extended attribute utilities"
+PKG_LICENSE="LGPL-2.1"
+PKG_ARCH="x86_64"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+    make
+    make install
+}

@@ -1,0 +1,9 @@
+#!/sbin/openrc-run
+name="Console Font"
+description="Set console font"
+command="/bin/setfont"
+command_args=""
+
+depend() {
+    after termencoding
+}

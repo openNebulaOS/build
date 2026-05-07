@@ -1,0 +1,15 @@
+PKG_NAME="apache2"
+PKG_VERSION="2.4"
+PKG_SOURCE="https://dlcdn.apache.org/httpd/httpd-2.4.58.tar.gz"
+PKG_DEPS="apr apr-util openssl pcre zlib"
+PKG_BUILD_DEPS="bison flex gcc make pkg-config"
+PKG_DESCRIPTION="Apache HTTP Server"
+PKG_LICENSE="Apache-2.0"
+PKG_ARCH="x86_64"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc/apache2 --enable-so \
+        --enable-ssl --enable-cgi --enable-rewrite
+    make
+    make install
+}

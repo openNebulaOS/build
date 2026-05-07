@@ -1,0 +1,12 @@
+PKG_NAME="iotop"
+PKG_VERSION="0.6"
+PKG_SOURCE="https://git.kernel.org/pub/scm/linux/kernel/git/dtor/iotop.git/snapshot/iotop-0.6.tar.gz"
+PKG_DEPS="python3"
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="I/O usage monitor"
+PKG_LICENSE="GPL-2.0"
+PKG_ARCH="x86_64"
+
+star_install() {
+    python3 setup.py install --prefix=/usr
+}

@@ -1,0 +1,16 @@
+PKG_NAME="linux"
+PKG_VERSION="6.8.0"
+PKG_RELEASE="1"
+PKG_SOURCE="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.8.0.tar.xz"
+PKG_DEPS=""
+PKG_BUILD_DEPS="bc binutils bison flex gcc gzip kmod libelf libssl make perl python3"
+PKG_DESCRIPTION="The Linux kernel"
+PKG_LICENSE="GPL-2.0"
+PKG_ARCH="x86_64"
+
+build_linux() {
+    make defconfig
+    make -j$(nproc)
+    make modules_install
+    make install
+}

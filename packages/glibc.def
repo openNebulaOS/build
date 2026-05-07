@@ -1,0 +1,18 @@
+PKG_NAME="glibc"
+PKG_VERSION="2.39"
+PKG_RELEASE="1"
+PKG_SOURCE="https://ftp.gnu.org/gnu/glibc/glibc-2.39.tar.xz"
+PKG_DEPS=""
+PKG_BUILD_DEPS="gcc bison flex"
+PKG_DESCRIPTION="GNU C Library"
+PKG_LICENSE="LGPL-2.1"
+PKG_ARCH="x86_64"
+
+build_glibc() {
+    mkdir build
+    cd build
+    ../configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --disable-profile --enable-kernel=4.19
+    make -j$(nproc)
+    make install
+}

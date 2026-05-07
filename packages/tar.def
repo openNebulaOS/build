@@ -1,0 +1,12 @@
+PKG_NAME="tar"
+PKG_VERSION="1.35"
+PKG_SOURCE="https://ftp.gnu.org/gnu/tar/tar-${PKG_VERSION}.tar.xz"
+PKG_DEPS="glibc acl attr"
+PKG_DESCRIPTION="GNU tar archive utility"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --disable-nls --enable-largefile
+    make
+    make install
+}

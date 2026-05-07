@@ -1,0 +1,415 @@
+#!/bin/bash
+set -e
+
+VERSION="1.0.0"
+STAR_BUILD_DIR="${STAR_BUILD_DIR:-/usr/src/star-build}"
+STAR_BUILD_CACHE="${STAR_BUILD_CACHE:-/var/cache/star-build}"
+STAR_BUILD_LOG="${STAR_BUILD_LOG:-/var/log/star-build/build.log}"
+
+command -v basename >/dev/null 2>&1 || { echo "basename not found" >&2; exit 1; }
+command -v dirname >/dev/null 2>&1 || { echo "dirname not found" >&2; exit 1; }
+command -v tar >/dev/null 2>&1 || { echo "tar not found" >&2; exit 1; }
+command -v gzip >/dev/null 2>&1 || { echo "gzip not found" >&2; exit 1; }
+command -v xz >/dev/null 2>&1 || { echo "xz not found" >&2; exit 1; }
+
+log() {
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    echo "$msg" >> "$STAR_BUILD_LOG"
+    echo "$msg"
+}
+
+init_build_env() {
+    mkdir -p "$STAR_BUILD_CACHE/sources" "$STAR_BUILD_CACHE/packages" "$STAR_BUILD_CACHE/tmp"
+    mkdir -p "$(dirname "$STAR_BUILD_LOG")"
+    touch "$STAR_BUILD_LOG"
+}
+
+load_pkg_def() {
+    local pkg_file="$1"
+
+    if [[ ! -f "$pkg_file" ]]; then
+        echo "Error: Package definition file not found: $pkg_file"
+        return 1
+    fi
+
+    source "$pkg_file"
+
+    PKG_NAME="${PKG_NAME:-$(basename "$pkg_file" .def)}"
+    PKG_VERSION="${PKG_VERSION:-}"
+    PKG_RELEASE="${PKG_RELEASE:-1}"
+    PKG_SOURCE="${PKG_SOURCE:-}"
+    PKG_DEPS="${PKG_DEPS:-}"
+    PKG_BUILD_DEPS="${PKG_BUILD_DEPS:-}"
+    PKG_DESCRIPTION="${PKG_DESCRIPTION:-}"
+    PKG_LICENSE="${PKG_LICENSE:-}"
+    PKG_ARCH="${PKG_ARCH:-}"
+
+    if [[ -z "$PKG_NAME" ]] || [[ -z "$PKG_VERSION" ]]; then
+        echo "Error: PKG_NAME and PKG_VERSION are required"
+        return 1
+    fi
+
+    log "INFO: Loaded package definition: $PKG_NAME $PKG_VERSION"
+}
+
+download_source() {
+    local source="$1"
+    local dest="$2"
+    local filename=$(basename "$source")
+
+    log "INFO: Downloading source: $source"
+
+    if [[ -f "$dest/$filename" ]]; then
+        log "INFO: Source already cached: $filename"
+        return 0
+    fi
+
+    case "$source" in
+        http://*|https://*|ftp://*)
+            if command -v curl >/dev/null 2>&1; then
+                curl -L -o "$dest/$filename" "$source" || return 1
+            elif command -v wget >/dev/null 2>&1; then
+                wget -O "$dest/$filename" "$source" || return 1
+            else
+                echo "Error: curl or wget required to download sources"
+                return 1
+            fi
+            ;;
+        file://*)
+            local src_file="${source#file://}"
+            cp "$src_file" "$dest/$filename" || return 1
+            ;;
+        *)
+            echo "Error: Unsupported source URL scheme: $source"
+            return 1
+            ;;
+    esac
+
+    log "INFO: Downloaded: $filename"
+}
+
+prepare_source() {
+    local pkg_dir="$1"
+
+    log "INFO: Preparing source for $PKG_NAME"
+
+    cd "$pkg_dir"
+
+    if [[ -n "$PKG_SOURCE" ]]; then
+        for source in $PKG_SOURCE; do
+            download_source "$source" "$pkg_dir/source"
+        done
+    fi
+
+    if [[ -f "configure.sh" ]]; then
+        chmod +x configure.sh
+        ./configure.sh || return 1
+    fi
+
+    log "INFO: Source prepared successfully"
+}
+
+build_package() {
+    local pkg_def="$1"
+    local output_dir="${2:-$STAR_BUILD_CACHE/packages}"
+
+    log "INFO: Building package from: $pkg_def"
+
+    if ! load_pkg_def "$pkg_def"; then
+        return 1
+    fi
+
+    local build_dir="$STAR_BUILD_CACHE/tmp/${PKG_NAME}-${PKG_VERSION}"
+    rm -rf "$build_dir"
+    mkdir -p "$build_dir/source" "$build_dir/build" "$build_dir/pkg"
+
+    if [[ -n "$PKG_SOURCE" ]]; then
+        for source in $PKG_SOURCE; do
+            local filename=$(basename "$source")
+            local ext="${filename##*.}"
+            case "$ext" in
+                tar.gz|tgz)
+                    tar -xzf "$STAR_BUILD_CACHE/sources/$filename" -C "$build_dir/source" --strip-components=1 2>/dev/null || \
+                    tar -xzf "$STAR_BUILD_CACHE/sources/$filename" -C "$build_dir/source"
+                    ;;
+                tar.xz|txz)
+                    tar -xJf "$STAR_BUILD_CACHE/sources/$filename" -C "$build_dir/source" --strip-components=1 2>/dev/null || \
+                    tar -xJf "$STAR_BUILD_CACHE/sources/$filename" -C "$build_dir/source"
+                    ;;
+                tar.bz2|tbz2)
+                    tar -xjf "$STAR_BUILD_CACHE/sources/$filename" -C "$build_dir/source" --strip-components=1 2>/dev/null || \
+                    tar -xjf "$STAR_BUILD_CACHE/sources/$filename" -C "$build_dir/source"
+                    ;;
+                zip)
+                    unzip -q "$STAR_BUILD_CACHE/sources/$filename" -d "$build_dir/source"
+                    ;;
+                *)
+                    cp "$STAR_BUILD_CACHE/sources/$filename" "$build_dir/source/"
+                    ;;
+            esac
+        done
+    fi
+
+    cd "$build_dir/build"
+
+    if [[ -f "$build_dir/source/build.sh" ]]; then
+        chmod +x "$build_dir/source/build.sh"
+        if ! "$build_dir/source/build.sh" "$build_dir/source" "$build_dir/build" "$build_dir/pkg"; then
+            echo "Error: Build script failed"
+            return 1
+        fi
+    else
+        if [[ -f "$build_dir/source/configure" ]] || [[ -f "$build_dir/source/configure.ac" ]]; then
+            if [[ -f "$build_dir/source/configure.ac" ]]; then
+                if command -v autoreconf >/dev/null 2>&1; then
+                    cd "$build_dir/source" && autoreconf -fi || true
+                    cd "$build_dir/build"
+                fi
+            fi
+
+            cd "$build_dir/source"
+            if [[ -f "config.guess" ]] && [[ ! -f "./configure" ]]; then
+                ./config.guess || true
+            fi
+
+            if [[ -x "./configure" ]]; then
+                ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+                    --mandir=/usr/share/man --infodir=/usr/share/info \
+                    --host="$PKG_ARCH" || return 1
+            fi
+        fi
+
+        if [[ -f "Makefile" ]] || [[ -f "makefile" ]]; then
+            make -j$(nproc 2>/dev/null || echo 4) || make || return 1
+        else
+            echo "Warning: No build system detected"
+        fi
+    fi
+
+    cd "$build_dir/build"
+    make install DESTDIR="$build_dir/pkg" || make install DESTDIR="$build_dir/pkg" 2>/dev/null || true
+
+    create_package "$build_dir/pkg" "$output_dir"
+
+    log "INFO: Package built successfully: $PKG_NAME-$PKG_VERSION"
+}
+
+create_package() {
+    local pkg_dir="$1"
+    local output_dir="$2"
+
+    log "INFO: Creating package archive for $PKG_NAME"
+
+    mkdir -p "$output_dir"
+
+    local archive_name="${PKG_NAME}-${PKG_VERSION}-${PKG_RELEASE}"
+    local archive_path="$output_dir/${archive_name}.star.xz"
+
+    cd "$pkg_dir"
+    tar -cJf "$archive_path" *
+
+    cat > "$output_dir/${archive_name}/star-pkg.sh" << EOF
+#!/bin/bash
+PKG_NAME="$PKG_NAME"
+PKG_VERSION="$PKG_VERSION"
+PKG_RELEASE="$PKG_RELEASE"
+PKG_DESCRIPTION="$PKG_DESCRIPTION"
+PKG_LICENSE="$PKG_LICENSE"
+PKG_ARCH="$PKG_ARCH"
+
+star_install() {
+    local pkg_dir="\$1"
+    cp -rf "\$pkg_dir"/* /
+}
+
+star_remove() {
+    echo "Removing $PKG_NAME..."
+}
+
+star_preinstall() {
+    echo "Pre-install hook for $PKG_NAME"
+}
+
+star_postinstall() {
+    echo "Post-install hook for $PKG_NAME"
+}
+EOF
+
+    chmod +x "$output_dir/${archive_name}/star-pkg.sh"
+
+    log "INFO: Package created: $archive_path"
+    echo "Package built: $archive_path"
+}
+
+build_from_git() {
+    local git_url="$1"
+    local output_dir="${3:-$STAR_BUILD_CACHE/packages}"
+
+    log "INFO: Building package from git: $git_url"
+
+    if ! command -v git >/dev/null 2>&1; then
+        echo "Error: git is required to build from git repository"
+        return 1
+    fi
+
+    local repo_name=$(basename "$git_url" .git)
+    local build_dir="$STAR_BUILD_CACHE/tmp/${repo_name}"
+
+    rm -rf "$build_dir"
+    git clone --depth 1 "$git_url" "$build_dir" || return 1
+
+    cd "$build_dir"
+
+    if [[ -f "package.def" ]]; then
+        build_package "$build_dir/package.def" "$output_dir"
+    elif [[ -f "PKGBUILD" ]]; then
+        echo "Warning: Arch PKGBUILD format detected but not directly supported"
+        return 1
+    else
+        echo "Error: No package definition found"
+        return 1
+    fi
+}
+
+list_build_cache() {
+    echo "Build cache contents:"
+    echo ""
+
+    if [[ ! -d "$STAR_BUILD_CACHE/packages" ]]; then
+        echo "No packages in cache"
+        return 0
+    fi
+
+    for pkg in "$STAR_BUILD_CACHE/packages"/*.star.xz; do
+        if [[ -f "$pkg" ]]; then
+            basename "$pkg"
+        fi
+    done
+}
+
+clean_cache() {
+    log "INFO: Cleaning build cache"
+
+    local size_before=$(du -sh "$STAR_BUILD_CACHE" 2>/dev/null | cut -f1)
+
+    rm -rf "$STAR_BUILD_CACHE/tmp"/*
+    rm -rf "$STAR_BUILD_CACHE/sources"/*
+
+    local size_after=$(du -sh "$STAR_BUILD_CACHE" 2>/dev/null | cut -f1)
+
+    echo "Build cache cleaned: $size_before -> $size_after"
+    log "INFO: Cache cleaned: $size_before -> $size_after"
+}
+
+show_help() {
+    cat << 'EOF'
+star-build - openNebula Package Build System
+
+Usage: star-build <command> [options]
+
+Commands:
+    build <package.def>   Build a package from definition file
+    git <url>             Build a package from git repository
+    list                 List packages in build cache
+    clean                Clean build cache
+    help                 Show this help message
+
+Options:
+    -c, --clean          Clean cache before building
+    -o, --output <dir>   Output directory for packages
+
+Package Definition File Format (package.def):
+    PKG_NAME="package-name"
+    PKG_VERSION="1.0.0"
+    PKG_RELEASE="1"
+    PKG_SOURCE="https://example.com/source.tar.gz"
+    PKG_DEPS="dependency1 dependency2"
+    PKG_BUILD_DEPS="build-dependency1"
+    PKG_DESCRIPTION="Package description"
+    PKG_LICENSE="GPL-3.0"
+    PKG_ARCH="x86_64"
+
+Examples:
+    star-build build linux.def
+    star-build git https://github.com/example/pkg.git
+    star-build list
+    star-build clean
+
+For more information, see star-build(8) man page.
+EOF
+}
+
+main() {
+    init_build_env
+
+    if [[ $# -eq 0 ]]; then
+        show_help
+        exit 0
+    fi
+
+    local clean_cache_flag=0
+    local output_dir=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -c|--clean)
+                clean_cache_flag=1
+                shift
+                ;;
+            -o|--output)
+                output_dir="$2"
+                shift 2
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    if [[ -n "$output_dir" ]]; then
+        mkdir -p "$output_dir"
+    fi
+
+    case "$1" in
+        build)
+            shift
+            if [[ $# -eq 0 ]]; then
+                echo "Error: Package definition file required"
+                exit 1
+            fi
+            if [[ $clean_cache_flag -eq 1 ]]; then
+                clean_cache
+            fi
+            build_package "$1" "$output_dir"
+            ;;
+        git)
+            shift
+            if [[ $# -eq 0 ]]; then
+                echo "Error: Git repository URL required"
+                exit 1
+            fi
+            if [[ $clean_cache_flag -eq 1 ]]; then
+                clean_cache
+            fi
+            build_from_git "$1" "$output_dir"
+            ;;
+        list)
+            list_build_cache
+            ;;
+        clean)
+            clean_cache
+            ;;
+        -h|--help|help)
+            show_help
+            ;;
+        *)
+            echo "Unknown command: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

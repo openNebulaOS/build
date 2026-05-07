@@ -1,0 +1,14 @@
+PKG_NAME="go"
+PKG_VERSION="1.22"
+PKG_SOURCE="https://go.dev/dl/go1.22.0.linux-amd64.tar.gz"
+PKG_DEPS="glibc"
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="Go programming language"
+PKG_LICENSE="BSD-3-Clause"
+PKG_ARCH="x86_64"
+
+star_install() {
+    tar -C /usr -xzf "\$PKG_SOURCE"
+    ln -sf /usr/go/bin/go /usr/bin/go
+    ln -sf /usr/go/bin/gofmt /usr/bin/gofmt
+}

@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+name="Hostname Service"
+description="Sets the system hostname"
+command="/bin/hostname"
+command_args="-F /etc/hostname"
+pidfile="/run/hostname.pid"
+
+depend() {
+    after localmount
+    before net.lo
+}

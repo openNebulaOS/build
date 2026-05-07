@@ -1,0 +1,12 @@
+#!/sbin/openrc-run
+
+name="openNebula Init"
+description="OpenRC initialization for openNebula Linux"
+command="/sbin/init"
+command_args=""
+ Bresetype="${RC_DEFAULTLEVEL:-sysinit}"
+ extra_started_commands="reload"
+ reload() {
+     einfo "Reloading services..."
+     /etc/init.d/*/restart 2>/dev/null || true
+ }

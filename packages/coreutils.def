@@ -1,0 +1,12 @@
+PKG_NAME="coreutils"
+PKG_VERSION="9.4"
+PKG_SOURCE="https://ftp.gnu.org/gnu/coreutils/coreutils-${PKG_VERSION}.tar.xz"
+PKG_DEPS="glibc acl attr gmp libcap"
+PKG_DESCRIPTION="GNU core utilities"
+
+build() {
+    ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+        --enable-no-install-program=hostname,su --with-gmp
+    make
+    make install
+}

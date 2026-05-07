@@ -1,0 +1,14 @@
+PKG_NAME="rustc"
+PKG_VERSION="1.76"
+PKG_SOURCE="https://static.rust-lang.org/dist/rustc-1.76.0-x86_64-unknown-linux-gnu.tar.gz"
+PKG_DEPS="gcc glibc"
+PKG_BUILD_DEPS=""
+PKG_DESCRIPTION="Rust systems programming language"
+PKG_LICENSE="MIT"
+PKG_ARCH="x86_64"
+
+star_install() {
+    ./install.sh --prefix=/usr --disable-embedded-doc
+    ln -sf /usr/bin/rustc /usr/bin/rustc
+    ln -sf /usr/bin/cargo /usr/bin/cargo
+}

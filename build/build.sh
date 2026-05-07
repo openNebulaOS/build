@@ -40,8 +40,15 @@ init_build() {
     touch "$LOG_FILE"
 
     if [[ -z "$KERNEL_VERSION" ]]; then
-        KERNEL_VERSION="6.8.0"
-        info "No kernel version specified, using default: $KERNEL_VERSION"
+        info "Detecting latest stable kernel version..."
+        KERNEL_VERSION=$(curl -sL "https://www.kernel.org/releases.json" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data['latest_stable']['version'])" 2>/dev/null)
+        if [[ -z "$KERNEL_VERSION" ]]; then
+            KERNEL_VERSION=$(curl -sL "https://cdn.kernel.org/kdist/foo/b6ee30b89b9c.txt" 2>/dev/null | head -1 | cut -d' ' -f1)
+        fi
+        if [[ -z "$KERNEL_VERSION" ]]; then
+            KERNEL_VERSION="6.9.9"
+        fi
+        info "Using kernel version: $KERNEL_VERSION"
     fi
 
     local kernel_major="${KERNEL_VERSION%%.*}"
